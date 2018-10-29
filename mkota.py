@@ -143,8 +143,9 @@ def main(old_package, new_package, ota_package_name, ext_models=[]):
         # 符号链接指向不同的文件
         compare_pj.diff_slink_files = []
         # 卡刷时直接替换(而不是打补丁)的文件(名)
-        ignore_name_list = ("build.prop", "recovery-from-boot.p",
-                            "install-recovery.sh")
+        ignore_names = {"build.prop",
+                        "recovery-from-boot.p",
+                        "install-recovery.sh",}
         for f1, f2 in compare_pj.diff_files:
             # 差异文件patch check
             if f1.slink != f2.slink:
@@ -153,7 +154,7 @@ def main(old_package, new_package, ota_package_name, ext_models=[]):
             if f1.sha1 == f2.sha1:
                 compare_pj.diff_info_files.append(f2)
                 continue
-            if f2.name in ignore_name_list:
+            if f2.name in ignore_names:
                 compare_pj.FL_2_isolated_files.append(f2)
                 cn.file2file(f2.path,
                              os.path.join(ota_path, "system", f2.rela_path))
