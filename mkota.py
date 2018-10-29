@@ -144,8 +144,7 @@ def main(old_package, new_package, ota_package_name, ext_models=[]):
         compare_pj.diff_slink_files = []
         # 卡刷时直接替换(而不是打补丁)的文件(名)
         ignore_name_list = ("build.prop", "recovery-from-boot.p",
-                            "install-recovery.sh", "services.jar",
-                            "RetroMusicPlayer.apk", "ViaBrowser.apk",)
+                            "install-recovery.sh")
         for f1, f2 in compare_pj.diff_files:
             # 差异文件patch check
             if f1.slink != f2.slink:
