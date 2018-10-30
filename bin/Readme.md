@@ -7,3 +7,4 @@
 - **Imgextractor.exe**: 到处都有(everywhere)<br>
 - **sdat2img.py**: https://github.com/xpirt/sdat2img<br>
 - **update-script_2_binary***: https://forum.xda-developers.com/android/software-hacking/dev-complete-shell-script-flashable-zip-t2934449<br>
+- **bootimg.exe**: http://blog.cofface.com/archives/741.html<br>

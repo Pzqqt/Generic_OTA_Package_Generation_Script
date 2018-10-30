@@ -122,27 +122,41 @@ class FL:
         self.dir_pathlist = [f.spath for f in self.dirlist]
 
         # 为文件和目录对象设置selabel属性
-        fc_path = os.path.join(self.basepath, "file_contexts.bin")
-        if os.path.exists(fc_path[:-4]):
-            fc_path = fc_path[:-4]
-        if os.path.exists(fc_path):
-            sel_dic = cn.get_file_contexts(fc_path)
-            for f in (self.filelist + self.dirlist):
-                sel = cn.get_selabel(sel_dic, f.spath)
-                if sel:
-                    f.selabel = sel
-                else:
-                    raise Exception("Failed to get selabel for %s!" % f.path)
-        else:
+        if not self.set_selabels(self.basepath):
             if cn.is_win():
-                raise Exception("Can not found file_contexts(.bin)!")
+                bootimg_ramdisk_path = cn.extract_bootimg(
+                    os.path.join(self.basepath, "boot.img"))
+                if not self.set_selabels(bootimg_ramdisk_path):
+                    raise Exception("Could not find (plat_)file_contexts(.bin)!"
+                                    " So we can not get selabel of files!")
             else:
-                if os.system("ls -Z") != 0:
-                    raise Exception("Can not get selabel with "
-                                    "\"ls -Z\" command!")
-                else:
+                if os.system("ls -Z") == 0:
                     for f in (self.filelist + self.dirlist):
                         f.selabel = cn.get_selabel_linux(f.path)
+                else:
+                    raise Exception("Can not get selabel with "
+                                    "\"ls -Z\" command!")
+
+    def set_selabels(self, fc_basepath):
+        fc_path = ""
+        for fc_name in ("file_contexts.bin", "plat_file_contexts.bin"):
+            fc_path_tmp = os.path.join(fc_basepath, fc_name)
+            if os.path.exists(fc_path_tmp):
+                fc_path = fc_path_tmp
+                break
+            if os.path.exists(fc_path_tmp[:-4]):
+                fc_path = fc_path_tmp[:-4]
+                break
+        if not fc_path:
+            return
+        sel_dic = cn.get_file_contexts(fc_path)
+        for f in (self.filelist + self.dirlist):
+            sel = cn.get_selabel(sel_dic, f.spath)
+            if sel:
+                f.selabel = sel
+            else:
+                raise Exception("Failed to get selabel for %s!" % f.path)
+        return True
 
     def __len__(self):
         return len(self.filelist)

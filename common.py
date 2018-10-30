@@ -88,6 +88,22 @@ def extract_sdat(TRANSFER_LIST_FILE, NEW_DATA_FILE, OUTPUT_IMAGE_FILE):
     _sdat2img(TRANSFER_LIST_FILE, NEW_DATA_FILE, OUTPUT_IMAGE_FILE)
     return OUTPUT_IMAGE_FILE
 
+def extract_bootimg(file_path):
+    # 解包boot.img文件
+    is_exist_path(file_path, file_name="boot.img")
+    workdir_bak = os.path.abspath(".")
+    bimg_path = os.path.join(os.path.split(file_path)[0], "bootimg_ext")
+    file2dir(file_path, bimg_path)
+    exe_path = file2dir(bin_call("bootimg.exe"), bimg_path)
+    os.chdir(bimg_path)
+    exit_code = os.system(" ".join((
+        "bootimg.exe", "--unpack-bootimg", "boot.img", ">nul"
+    )))
+    os.chdir(workdir_bak)
+    if exit_code != 0:
+        raise Exception("Failed to extract %s with bootimg.exe!" % file_path)
+    return os.path.join(bimg_path, "initrd")
+
 def extract_img(file_path):
     # 使用Imgextractor.exe程序解包*.img文件 并返回解压得到的目录路径
     # 用于win环境
@@ -153,10 +169,9 @@ def get_statfile(path):
 
 def get_file_contexts(file_path):
     # 解析file_contexts文件 生成属性键值字典
-    # 注：文件名必须为file_contexts或file_contexts.bin
     is_exist_path(file_path)
-    # 如果是file_contexts.bin文件则先进行转换
-    if os.path.basename(file_path) == "file_contexts.bin":
+    # 如果是*.bin文件则先进行转换
+    if os.path.basename(file_path).endswith(".bin"):
         fpath = file_path[:-4]
         os.system(" ".join((
             bin_call("sefcontext_decompile"), "-o", fpath, file_path
@@ -243,6 +258,7 @@ def file2file(src, dst, move=False):
         shutil.move(src, dst)
     else:
         shutil.copyfile(src, dst)
+    return dst
 
 def file2dir(src, dst, move=False):
     # 复制文件到目录(不修改文件名)
@@ -251,6 +267,7 @@ def file2dir(src, dst, move=False):
     shutil.copy(src, dst)
     if move:
         os.remove(src)
+    return os.path.join(dst, os.path.split(src)[1])
 
 def remove_path(path):
     # 移除文件/目录(如果存在的话)
