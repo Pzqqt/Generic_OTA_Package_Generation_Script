@@ -160,7 +160,7 @@ def main(old_package, new_package, ota_package_name, ext_models=[]):
                              os.path.join(ota_path, "system", f2.rela_path))
                 continue
             sys.stderr.write("Generating patch file for %-99s\r" % f2.spath)
-            temp_p_file = tempfile.mkstemp(".p.tmp")
+            temp_p_file = tempfile.mktemp(".p.tmp")
             bsdiff4.file_diff(f1.path, f2.path, temp_p_file)
             p_path = os.path.join(ota_path, "patch",
                                   "system", f2.rela_path + ".p")
