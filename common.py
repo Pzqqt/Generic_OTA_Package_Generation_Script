@@ -90,6 +90,7 @@ def extract_sdat(TRANSFER_LIST_FILE, NEW_DATA_FILE, OUTPUT_IMAGE_FILE):
 
 def extract_bootimg(file_path):
     # 解包boot.img文件
+    # 用于win环境
     is_exist_path(file_path, file_name="boot.img")
     workdir_bak = os.path.abspath(".")
     bimg_path = os.path.join(os.path.split(file_path)[0], "bootimg_ext")
@@ -187,7 +188,6 @@ def get_file_contexts(file_path):
                 if v.startswith("--"):
                     v = v.split(maxsplit=1)[-1].strip()
                 sel_dic[k] = v
-                # key中可能会有转义字符\ 实际使用时可能需要剔除
     return sel_dic
 
 def get_selabel(dic, path):
@@ -220,11 +220,8 @@ def get_selabel_linux(path):
 def parameter_split(line):
     # 对edify脚本的参数进行拆分
     # 拆分得到的列表的第一个元素为函数名
-    try:
-        start = line.index("(")
-        end = line.rindex(")")
-    except ValueError:
-        raise
+    start = line.index("(")
+    end = line.rindex(")")
     pars = []
     pars.append(line[:start])
     for par in line[start+1:end].split(", "):

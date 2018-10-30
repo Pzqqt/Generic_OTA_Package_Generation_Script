@@ -21,14 +21,10 @@ class FL_Compare:
         self.__file_compare()
 
     def __gen_isolated_dirlist(self):
-        self.FL_1_isolated_dirs = [
-            d for d in self.FL_1.dirlist
-            if d.spath not in self.FL_2.dir_pathlist
-        ]
-        self.FL_2_isolated_dirs = [
-            d for d in self.FL_2.dirlist
-            if d.spath not in self.FL_1.dir_pathlist
-        ]
+        self.FL_1_isolated_dirs = [d for d in self.FL_1.dirlist
+                                   if d.spath not in self.FL_2.dir_pathlist]
+        self.FL_2_isolated_dirs = [d for d in self.FL_2.dirlist
+                                   if d.spath not in self.FL_1.dir_pathlist]
         self.FL_1_isolated_dirs_spaths = \
             [d.spath for d in self.FL_1_isolated_dirs]
         self.FL_2_isolated_dirs_spaths = \
@@ -55,10 +51,8 @@ class FL_Compare:
                     if d in f.spath:
                         self.ignore_del_files.append(f)
                 self.FL_1_isolated_files.append(f)
-        self.FL_2_isolated_files = [
-            f for f in self.FL_2
-            if f.spath not in self.FL_1.file_pathlist
-        ]
+        self.FL_2_isolated_files = [f for f in self.FL_2
+                                    if f.spath not in self.FL_1.file_pathlist]
         self.FL_1_isolated_files_spaths = \
             [f.spath for f in self.FL_1_isolated_files]
         self.FL_2_isolated_files_spaths = \
@@ -88,14 +82,10 @@ class FL_Compare:
 
     def __dir_compare(self):
         self.diff_dirs = []
-        FL_1_dirs_cp = [
-            d for d in self.FL_1.dirlist
-            if d.spath not in self.FL_1_isolated_dirs_spaths
-        ]
-        FL_2_dirs_cp = [
-            d for d in self.FL_2.dirlist
-            if d.spath not in self.FL_2_isolated_dirs_spaths
-        ]
+        FL_1_dirs_cp = [d for d in self.FL_1.dirlist
+                        if d.spath not in self.FL_1_isolated_dirs_spaths]
+        FL_2_dirs_cp = [d for d in self.FL_2.dirlist
+                        if d.spath not in self.FL_2_isolated_dirs_spaths]
         assert len(FL_1_dirs_cp) == len(FL_2_dirs_cp)
         i = 0
         while i < len(FL_1_dirs_cp):
@@ -106,14 +96,10 @@ class FL_Compare:
 
     def __file_compare(self):
         self.diff_files = []
-        FL_1_files_cp = [
-            f for f in self.FL_1
-            if f.spath not in self.FL_1_isolated_files_spaths
-        ]
-        FL_2_files_cp = [
-            f for f in self.FL_2
-            if f.spath not in self.FL_2_isolated_files_spaths
-        ]
+        FL_1_files_cp = [f for f in self.FL_1
+                         if f.spath not in self.FL_1_isolated_files_spaths]
+        FL_2_files_cp = [f for f in self.FL_2
+                         if f.spath not in self.FL_2_isolated_files_spaths]
         assert len(FL_1_files_cp) == len(FL_2_files_cp)
         i = 0
         while i < len(FL_1_files_cp):
