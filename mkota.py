@@ -133,6 +133,7 @@ def main(old_package, new_package, ota_package_name, ext_models=[]):
     update_script.add("}")
     if len(compare_pj.diff_files):
         update_script.blank_line()
+        cn.mkdir(os.path.join(ota_path, "patch"))
         update_script.ui_print("Unpack Patch Files ...")
         update_script.package_extract_dir("patch", "/tmp/patch")
         update_script.blank_line()
