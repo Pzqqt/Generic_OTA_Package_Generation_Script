@@ -139,7 +139,10 @@ def get_statfile(path):
     is_exist_path(openfile)
     with open(openfile, "r", encoding="UTF-8", errors="ignore") as f:
         for line in f.readlines():
-            info = list(line.strip()[line.index("/") + 1:].split())
+            try:
+                info = list(line.strip()[line.index("/") + 1:].split())
+            except:
+                continue
             if len(info) == 4:
                 info.append("")
             save_dic[os.path.join(*info[0].split("/"))] = info[1:]
