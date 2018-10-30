@@ -38,10 +38,6 @@ Usage: mkota.py <old_package_path> <new_package_path> [ota_package_name] [--ext-
 
 - 目前仅支持对Lollipop+的Rom包进行操作，不支持使用传统方法和特殊方法打包的Rom，不支持Treble Rom(含有vendor.new.dat(.br))<br>
 (Only Lollipop+ Rom supported. Not supported Rom of packaged with traditional methods or special methods. Not supported Treble Rom (with vendor.new.dat(.br)).)
-- 本脚本在遍历Rom文件时会尝试从file_contexts(.bin)文件中获取/system中的文件和目录的SELinux属性，如果Rom没有file_contexts(.bin)文件，则会尝试调用**sudo**命令来挂载system镜像。<br>
-如果Rom没有file_contexts(.bin)文件，并且你是在Windows系统下进行操作的，那么很抱歉，本工具将抛出异常并终止运行<br>
-(When traversing the Rom file, this script will try to get the SELinux attribute of the files and directories in /system from the **file_contexts(.bin)** file. If Rom does not have a **file_contexts(.bin)** file, it will try to call the **sudo** command to mount the system image.<br>
-If Rom doesn't have **file_contexts(.bin)** file and you are operating under Windows OS, then sorry, the tool will throw an exception and terminate the run.)
 - 为什么使用bsdiff而不使用imgdiff?因为imgdiff在Windows系统下无法使用，其次bsdiff已经足够，imgdiff虽然更好但并非必须<br>
 (Why use bsdiff instead of imgdiff? Because imgdiff is not available on Windows OS, secondly bsdiff is enough, imgdiff is better but not necessary.)
 
