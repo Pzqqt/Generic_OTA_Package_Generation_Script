@@ -245,7 +245,7 @@ def main(old_package, new_package, ota_package_name, ext_models=tuple()):
         f.write("# Dummy file; update-binary is a shell script.\n")
 
     print("\nMaking OTA package...")
-    ota_zip = cn.make_zip(ota_path, ota_package_name)
+    ota_zip = cn.make_zip(ota_path)
     ota_zip_real = os.path.join(os.path.split(old_package)[0], ota_package_name)
     cn.file2file(ota_zip, ota_zip_real, move=True)
 

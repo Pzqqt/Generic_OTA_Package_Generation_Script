@@ -43,13 +43,12 @@ def is_exist_path(path, file_format="", file_type="", file_name=""):
             return
         raise WrongFileTypeError("%s: Not a(n) %s file!" % (path, file_name))
 
-def make_zip(path, file_name):
+def make_zip(path):
     # 打包zip文件
     # 打包目录下的所有文件和目录 而并非打包目录本身
     if not os.path.isdir(path):
         raise PathNotFoundError("%s: No such directory!" % path)
-    zip_path = os.path.normpath(os.path.join(path, "..", file_name))
-    remove_path(zip_path)
+    zip_path = tempfile.mktemp(".zip", "GOTAPGS_")
     with zipfile.ZipFile(zip_path, "w") as zip:
         for root, dirs, files in os.walk(path, topdown=True):
             for f in files:
@@ -95,11 +94,9 @@ def extract_bootimg(file_path):
     workdir_bak = os.path.abspath(".")
     bimg_path = os.path.join(os.path.split(file_path)[0], "bootimg_ext")
     file2dir(file_path, bimg_path)
-    exe_path = file2dir(bin_call("bootimg.exe"), bimg_path)
+    file2dir(bin_call("bootimg.exe"), bimg_path)
     os.chdir(bimg_path)
-    exit_code = os.system(" ".join((
-        "bootimg.exe", "--unpack-bootimg", "boot.img", ">nul"
-    )))
+    exit_code = os.system("bootimg.exe --unpack-bootimg boot.img")
     os.chdir(workdir_bak)
     if exit_code != 0:
         raise Exception("Failed to extract %s with bootimg.exe!" % file_path)
