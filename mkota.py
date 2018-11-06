@@ -14,7 +14,7 @@ import re
 
 __version__ = "v1.0"
 
-def main(old_package, new_package, ota_package_name, ext_models=[]):
+def main(old_package, new_package, ota_package_name, ext_models=tuple()):
 
     print("\nUnpacking OLD Rom...")
     p1_path = cn.extract_zip(old_package)
@@ -258,6 +258,12 @@ def main(old_package, new_package, ota_package_name, ext_models=[]):
     print("\nOutput OTA package: %s !" % ota_zip_real)
     sys.exit()
 
+def adj_zip_name(zip_name):
+    new_zip_name = str(zip_name)
+    if not re.match(r"[\S]*\.[Zz][Ii][Pp]", new_zip_name):
+        new_zip_name += ".zip"
+    return new_zip_name
+
 if __name__ == "__main__":
 
     if sys.version_info[0] != 3:
@@ -287,19 +293,18 @@ if __name__ == "__main__":
         ota_package_name = "OTA.zip"
     if len(sys.argv) == 3:
         main(old_package, new_package, ota_package_name)
-    elif len(sys.argv) >= 4:
-        # 指定额外的可通过验证的机型代号
-        ext_models = []
+    if len(sys.argv) == 4:
+        if str(sys.argv[3]) != "--ext-models":
+            ota_package_name = adj_zip_name(sys.argv[3])
+        main(old_package, new_package, ota_package_name)
+    if len(sys.argv) >= 5:
         if str(sys.argv[3]) == "--ext-models":
-            ext_models = sys.argv[4:]
-        elif str(sys.argv[4]) == "--ext-models":
-            ota_package_name = str(sys.argv[3])
-            if not re.match(r"[\S]*\.[Zz][Ii][Pp]", ota_package_name):
-                ota_package_name += ".zip"
-            ext_models = sys.argv[5:]
+            ext_models = tuple(sys.argv[4:])
+        else:
+            ota_package_name = adj_zip_name(sys.argv[3])
+            ext_models = tuple(sys.argv[5:])
         main(old_package, new_package, ota_package_name, ext_models)
-    else:
-        print("Usage:", os.path.split(__file__)[1],
+    print("Usage:", os.path.split(__file__)[1],
 '''<old_package_path> <new_package_path> [ota_package_name] [--ext-models [model_1] [model_2] ...]
 
     <old_package_path>                     : old package file path
@@ -307,4 +312,4 @@ if __name__ == "__main__":
     [ota_package_name]                     : custom generated OTA package name (default OTA.zip)
     [--ext-models [model_1] [model_2] ...] : additional model that allows for model verification
 ''')
-        sys.exit()
+    sys.exit()
