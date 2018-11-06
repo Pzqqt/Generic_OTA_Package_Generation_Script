@@ -165,7 +165,13 @@ def main(old_package, new_package, ota_package_name, ext_models=tuple()):
                 continue
             sys.stderr.write("Generating patch file for %-99s\r" % f2.spath)
             temp_p_file = tempfile.mktemp(".p.tmp")
-            bsdiff4.file_diff(f1.path, f2.path, temp_p_file)
+            if not cn.get_bsdiff(f1, f2, temp_p_file):
+                # 如果生成补丁耗时太长 则取消生成补丁 直接替换文件
+                compare_pj.FL_2_isolated_files.append(f2)
+                cn.file2file(f2.path,
+                             os.path.join(ota_path, "system", f2.rela_path))
+                cn.remove_path(temp_p_file)
+                continue
             p_path = os.path.join(ota_path, "patch",
                                   "system", f2.rela_path + ".p")
             p_spath = p_path.replace(ota_path, "/tmp", 1).replace("\\", "/")
@@ -276,13 +282,6 @@ if __name__ == "__main__":
         sys.exit()
 
     print("\nGeneric OTA Package Generation Script %s\nBy Pzqqt" % __version__)
-
-    try:
-        import bsdiff4
-    except:
-        print("\nPlease use pip(3) to install \"bsdiff4\" "
-              "before using this tool.")
-        sys.exit()
 
     if len(sys.argv) >= 3:
         old_package = str(sys.argv[1])
