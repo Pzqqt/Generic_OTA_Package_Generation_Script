@@ -16,6 +16,9 @@ __version__ = "v1.0"
 
 def main(old_package, new_package, ota_package_name, ext_models=tuple()):
 
+    # 预清理临时文件目录
+    clean_temp()
+
     print("\nUnpacking OLD Rom...")
     p1_path = cn.extract_zip(old_package)
     print("\nUnpacking NEW Rom...")
@@ -246,14 +249,7 @@ def main(old_package, new_package, ota_package_name, ext_models=tuple()):
     ota_zip_real = os.path.join(os.path.split(old_package)[0], ota_package_name)
     cn.file2file(ota_zip, ota_zip_real, move=True)
 
-    print("\nCleaning temp files...")
-    if not cn.is_win():
-        os.system("sudo umount %s" % p1_spath)
-        os.system("sudo umount %s" % p2_spath)
-    cn.remove_path(p1_path)
-    cn.remove_path(p2_path)
-    cn.remove_path(ota_path)
-
+    clean_temp()
     print("\nDone!")
     print("\nOutput OTA package: %s !" % ota_zip_real)
     sys.exit()
@@ -263,6 +259,15 @@ def adj_zip_name(zip_name):
     if not re.match(r"[\S]*\.[Zz][Ii][Pp]", new_zip_name):
         new_zip_name += ".zip"
     return new_zip_name
+
+def clean_temp():
+    print("\nCleaning temp files...")
+    for d in os.listdir(tempfile.gettempdir()):
+        if d.startswith("GOTAPGS_"):
+            if not cn.is_win():
+                os.system("sudo umount %s > /dev/null"
+                          % os.path.join(tempfile.gettempdir(), d, "system_"))
+            cn.remove_path(os.path.join(tempfile.gettempdir(), d))
 
 if __name__ == "__main__":
 
@@ -278,14 +283,6 @@ if __name__ == "__main__":
         print("\nPlease use pip(3) to install \"bsdiff4\" "
               "before using this tool.")
         sys.exit()
-
-    # 预清理临时文件目录
-    for d in os.listdir(tempfile.gettempdir()):
-        if d.startswith("GOTAPGS_"):
-            if not cn.is_win():
-                os.system("sudo umount %s > /dev/null"
-                          % os.path.join(tempfile.gettempdir(), d, "system_"))
-            cn.remove_path(os.path.join(tempfile.gettempdir(), d))
 
     if len(sys.argv) >= 3:
         old_package = str(sys.argv[1])
