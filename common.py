@@ -92,7 +92,8 @@ def extract_br(file_path):
 
 def extract_sdat(TRANSFER_LIST_FILE, NEW_DATA_FILE, OUTPUT_IMAGE_FILE):
     # 解包*.new.dat文件
-    _sdat2img(TRANSFER_LIST_FILE, NEW_DATA_FILE, OUTPUT_IMAGE_FILE)
+    _sdat2img(TRANSFER_LIST_FILE, NEW_DATA_FILE, OUTPUT_IMAGE_FILE,
+              silent_mode=True)
     return OUTPUT_IMAGE_FILE
 
 def extract_bootimg(file_path):

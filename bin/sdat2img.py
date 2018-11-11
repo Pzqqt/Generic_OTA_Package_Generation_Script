@@ -8,8 +8,16 @@
 
 import sys, os, errno
 
-def main(TRANSFER_LIST_FILE, NEW_DATA_FILE, OUTPUT_IMAGE_FILE):
+def main(TRANSFER_LIST_FILE, NEW_DATA_FILE, OUTPUT_IMAGE_FILE,
+         silent_mode=False):
     __version__ = '1.1'
+
+    if silent_mode:
+        def print(arg):
+            pass
+    else:
+        def print(arg):
+            sys.stderr.write("%s\n" % arg)
 
     if sys.hexversion < 0x02070000:
         print >> sys.stderr, "Python 2.7 or newer is required."
