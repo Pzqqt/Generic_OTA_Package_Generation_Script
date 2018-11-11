@@ -31,6 +31,8 @@ def main(old_package, new_package, ota_package_name, ext_models=tuple()):
     p1_img = cn.extract_sdat(os.path.join(p1_path, "system.transfer.list"),
                              os.path.join(p1_path, "system.new.dat"),
                              os.path.join(p1_path, "system.img"))
+    cn.remove_path(os.path.join(p1_path, "system.new.dat.br"))
+    cn.remove_path(os.path.join(p1_path, "system.new.dat"))
     if os.path.exists(os.path.join(p2_path, "system.new.dat.br")):
         print("\nUnpacking NEW Rom's system.new.dat.br...")
         cn.extract_br(os.path.join(p2_path, "system.new.dat.br"))
@@ -38,15 +40,19 @@ def main(old_package, new_package, ota_package_name, ext_models=tuple()):
     p2_img = cn.extract_sdat(os.path.join(p2_path, "system.transfer.list"),
                              os.path.join(p2_path, "system.new.dat"),
                              os.path.join(p2_path, "system.img"))
+    cn.remove_path(os.path.join(p2_path, "system.new.dat.br"))
+    cn.remove_path(os.path.join(p2_path, "system.new.dat"))
 
     print("\nUnpacking OLD Rom's system.img...")
     if cn.is_win():
         p1_spath = cn.extract_img(p1_img)
+        cn.remove_path(p1_img)
     else:
         p1_spath = cn.mount_img(p1_img)
     print("\nUnpacking NEW Rom's system.img...")
     if cn.is_win():
         p2_spath = cn.extract_img(p2_img)
+        cn.remove_path(p2_img)
     else:
         p2_spath = cn.mount_img(p2_img)
 
