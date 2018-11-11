@@ -12,7 +12,7 @@ import hashlib
 import tempfile
 import re
 
-__version__ = "v1.0"
+__version__ = "v1.1"
 
 class main():
 
