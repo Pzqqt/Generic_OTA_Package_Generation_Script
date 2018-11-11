@@ -19,7 +19,7 @@ pip3 install bsdiff4
 ```
 
 此脚本当然也可以在Windows系统中使用，但是如果你在安装bsdiff4时遇到困难，请寻找非官方的二进制包并自行安装。你可以在<a href="https://www.lfd.uci.edu/~gohlke/pythonlibs/#bsdiff4">这里</a>找到它，请根据您的Python版本和系统架构进行选择<br>
-(This script can of course also be used on Windows OS, but if you have trouble installing bsdiff4, you need look for unofficial binary packages and install it yourself. You can find it <a href="https://www.lfd.uci.edu/~gohlke/pythonlibs/#bsdiff4">at here</a>. Please choose according to your Python version and system architecture.)
+(This script can of course also be used on Windows OS, but if you have trouble installing bsdiff4, you need look for unofficial binary packages and install it yourself. You can find it at <a href="https://www.lfd.uci.edu/~gohlke/pythonlibs/#bsdiff4">here</a>. Please choose according to your Python version and system architecture.)
 
 ## Usage
 
@@ -36,8 +36,8 @@ Usage: mkota.py <old_package_path> <new_package_path> [ota_package_name] [--ext-
 
 ## Note
 
-- 目前仅支持对Lollipop+的Rom包进行操作，不支持使用传统方法和特殊方法打包的Rom，不支持Treble Rom(含有vendor.new.dat(.br))<br>
-(Only Lollipop+ Rom supported. Not supported Rom of packaged with traditional methods or special methods. Not supported Treble Rom (with vendor.new.dat(.br)).)
+- 目前仅支持对Lollipop+的Rom包进行操作，不支持使用传统方法和特殊方法打包的Rom<br>
+(Only Lollipop+ Rom supported. Not supported Rom of packaged with traditional methods or special methods.)
 - 为什么使用bsdiff而不使用imgdiff?因为imgdiff在Windows系统下无法使用，其次bsdiff已经足够，imgdiff虽然更好但并非必须<br>
 (Why use bsdiff instead of imgdiff? Because imgdiff is not available on Windows OS, secondly bsdiff is enough, imgdiff is better but not necessary.)
 
