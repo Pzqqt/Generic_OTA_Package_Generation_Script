@@ -127,9 +127,9 @@ def mount_img(file_path):
     # 使用sudo mount命令挂载*.img文件 并返回挂载路径
     # 用于Linux环境
     is_exist_path(file_path, "img", "EXT2\\EXT3\\EXT4\\YAFFS2\\CRAMFS image")
-    dir_path = os.path.normpath(os.path.join(file_path, "..", "system_"))
+    dir_path = file_path[:-4] + "_"
     mkdir(dir_path)
-    print("We need mount system.img with mount command.")
+    print("We need mount *.img with mount command.")
     print("If you see the password entry prompt, "
           "enter the sudo password to get permission.")
     os.system(" ".join((
@@ -192,6 +192,11 @@ def get_statfile(path):
             # 最终返回的字典 以文件相对路径为key 其他信息的列表为value
     return save_dic
 
+def filter_sel(line):
+    return any([line.startswith("/system"),
+                line.startswith("/vendor"),
+                line.startswith("/(vendor|system/vendor)")])
+
 def get_file_contexts(file_path):
     # 解析file_contexts文件 生成属性键值字典
     is_exist_path(file_path)
@@ -207,7 +212,7 @@ def get_file_contexts(file_path):
     with open(fpath, "r", encoding="UTF-8", errors="ignore") as f:
         for line in f.readlines():
             linesp = line.strip()
-            if linesp.startswith("/system"):
+            if filter_sel(linesp):
                 k, v = linesp.split(maxsplit=1)
                 if v.startswith("--"):
                     v = v.split(maxsplit=1)[-1].strip()
@@ -217,11 +222,9 @@ def get_file_contexts(file_path):
 def get_selabel(dic, path):
     # 通过检索get_file_contexts函数返回的dic
     # 获取path的SE上下文属性 匹配最后一个结果
-    k = ""
-    for reg in dic.keys():
+    for reg in list(dic.keys())[::-1]:
         if re.match(reg, path):
-            k = dic[reg]
-    return k
+            return dic[reg]
 
 def get_selabel_linux(path):
     # 获取path的SE上下文属性

@@ -14,273 +14,458 @@ import re
 
 __version__ = "v1.0"
 
-def main(old_package, new_package, ota_package_name, ext_models=tuple()):
+class main():
 
-    # 预清理临时文件目录
-    clean_temp()
+    def __init__(self, old_package, new_package, ota_package_name, ext_models=None):
+        self.old_package = old_package
+        self.new_package = new_package
+        self.ota_package_name = ota_package_name
+        if ext_models is None:
+            self.ext_models = tuple()
+        else:
+            self.ext_models = ext_models
+        self.run()
 
-    print("\nUnpacking OLD Rom...")
-    p1_path = cn.extract_zip(old_package)
-    print("\nUnpacking NEW Rom...")
-    p2_path = cn.extract_zip(new_package)
+    def run(self):
+        self.clean_temp()
 
-    if os.path.exists(os.path.join(p1_path, "system.new.dat.br")):
-        print("\nUnpacking OLD Rom's system.new.dat.br...")
-        cn.extract_br(os.path.join(p1_path, "system.new.dat.br"))
-    print("\nUnpacking OLD Rom's system.new.dat...")
-    p1_img = cn.extract_sdat(os.path.join(p1_path, "system.transfer.list"),
-                             os.path.join(p1_path, "system.new.dat"),
-                             os.path.join(p1_path, "system.img"))
-    cn.remove_path(os.path.join(p1_path, "system.new.dat.br"))
-    cn.remove_path(os.path.join(p1_path, "system.new.dat"))
-    if os.path.exists(os.path.join(p2_path, "system.new.dat.br")):
-        print("\nUnpacking NEW Rom's system.new.dat.br...")
-        cn.extract_br(os.path.join(p2_path, "system.new.dat.br"))
-    print("\nUnpacking NEW Rom's system.new.dat...")
-    p2_img = cn.extract_sdat(os.path.join(p2_path, "system.transfer.list"),
-                             os.path.join(p2_path, "system.new.dat"),
-                             os.path.join(p2_path, "system.img"))
-    cn.remove_path(os.path.join(p2_path, "system.new.dat.br"))
-    cn.remove_path(os.path.join(p2_path, "system.new.dat"))
+        self.unpack_zip()
+        self.p1_simg = self.unpack_dat(self.p1_path, is_new=False)
+        self.p2_simg = self.unpack_dat(self.p2_path, is_new=True)
+        self.pt_flag = self.is_pt()
+        if self.pt_flag:
+            self.p1_vimg = self.unpack_dat(self.p1_path, is_new=False, is_vendor=True)
+            self.p2_vimg = self.unpack_dat(self.p2_path, is_new=True, is_vendor=True)
 
-    print("\nUnpacking OLD Rom's system.img...")
-    if cn.is_win():
-        p1_spath = cn.extract_img(p1_img)
-        cn.remove_path(p1_img)
-    else:
-        p1_spath = cn.mount_img(p1_img)
-    print("\nUnpacking NEW Rom's system.img...")
-    if cn.is_win():
-        p2_spath = cn.extract_img(p2_img)
-        cn.remove_path(p2_img)
-    else:
-        p2_spath = cn.mount_img(p2_img)
+        self.p1_spath = self.unpack_img(self.p1_simg, is_new=False)
+        self.p2_spath = self.unpack_img(self.p2_simg, is_new=True)
+        if self.pt_flag:
+            self.p1_vpath = self.unpack_img(self.p1_vimg, is_new=False, is_vendor=True)
+            self.p2_vpath = self.unpack_img(self.p2_vimg, is_new=True, is_vendor=True)
 
-    ota_path = tempfile.mkdtemp("_OTA", "GOTAPGS_")
+        self.ota_path = tempfile.mkdtemp("_OTA", "GOTAPGS_")
 
-    print("\nRetrieving OLD Rom's file list...")
-    p1 = FL(p1_spath)
-    cn.clean_line()
-    print("Search completed\nFound %s files, %s directories"
-          % (len(p1), len(p1.dirlist)))
-    print("\nRetrieving NEW Rom's file list...")
-    p2 = FL(p2_spath)
-    cn.clean_line()
-    print("Search completed\nFound %s files, %s directories"
-          % (len(p2), len(p2.dirlist)))
+        self.p1_sfl = self.gen_file_list(self.p1_spath, is_new=False)
+        self.p2_sfl = self.gen_file_list(self.p2_spath, is_new=True)
+        if self.pt_flag:
+            self.p1_vfl = self.gen_file_list(self.p1_vpath, is_new=False, is_vendor=True)
+            self.p2_vfl = self.gen_file_list(self.p2_vpath, is_new=True, is_vendor=True)
 
-    print("\nStart comparison...")
-    compare_pj = FL_Compare(p1, p2)
-    print("\nComparative completion!")
+        self.do_compare()
+        self.get_rom_info()
+        self.get_bootimg_block()
+        self.updater_init()
+        self.cp_files_1st()
+        self.diff_files_patch_init()
+        self.diff_files_patch_system()
+        if self.pt_flag:
+            self.diff_files_patch_vendor()
+        self.diff_files_patch_write()
 
-    print("\nGetting rom information...")
-    p1_prop = cn.get_build_prop(os.path.join(p1_spath, "build.prop"))
-    p2_prop = cn.get_build_prop(os.path.join(p2_spath, "build.prop"))
-    model = p2_prop.get("ro.product.device", "Unknown")
-    arch = "arm"
-    is_64bit = False
-    if p2_prop.get("ro.product.cpu.abi") == "x86":
-        arch = "x86"
-    if p2_prop.get("ro.product.cpu.abi2") == "x86":
-        arch = "x86"
-    if int(p2_prop.get("ro.build.version.sdk", "0")) >= 21:
-        if p2_prop.get("ro.product.cpu.abi") == "arm64-v8a":
-            arch = "arm64"
-            is_64bit = True
-        if p2_prop.get("ro.product.cpu.abi") == "x86_64":
-            arch = "x64"
-            is_64bit = True
+        self.remove_init()
+        self.remove_dirs()
+        self.remove_files()
+        self.remove_slink_dirs()
+        self.remove_slink_files()
 
-    check_flag = compare_build_prop(p1_prop, p2_prop)
-    print("\nModel: %s" % model)
-    print("\nArch: %s" % arch)
-    print("\nRom verify info: %s=%s" % check_flag[:-1])
+        self.package_extract()
+        self.create_symlinks()
+        self.set_metadata()
 
-    print("\nCopying files...")
-    new_bootimg = os.path.join(p2_path, "boot.img")
-    cn.is_exist_path(new_bootimg)
-    cn.file2dir(new_bootimg, ota_path)
-    for f in compare_pj.FL_2_isolated_files:
-        sys.stderr.write("Copying file %-99s\r" % f.spath)
-        cn.file2file(f.path, os.path.join(ota_path, "system", f.rela_path))
-    cn.clean_line()
+        self.updater_end()
+        self.updater_write()
 
-    print("\nGenerating script...")
-    old_script = os.path.join(p2_path, "META-INF", "com",
-                              "google", "android", "updater-script")
-    cn.is_exist_path(old_script)
-    bootimg_block = ""
-    with open(old_script, "r", encoding="UTF-8", errors="ignore") as f:
-        for line in f.readlines():
-            if line.strip().startswith("package_extract_file"):
-                if "\"boot.img\"" in line:
-                    bootimg_block = cn.parameter_split(line.strip())[-1]
-    if not bootimg_block:
-        raise Exception("Can not generate boot.img flash script!")
-    update_script = Updater(is_64bit)
-    if model != "Unknown":
-        update_script.check_device(model, ext_models)
-        update_script.blank_line()
-    update_script.ui_print("Updating from %s" % check_flag[1])
-    update_script.ui_print("to %s" % check_flag[2])
-    update_script.ui_print("It may take several minutes, please be patient.")
-    update_script.ui_print(" ")
-    update_script.blank_line()
-    update_script.ui_print("Remount /system ...")
-    update_script.add("[ $(is_mounted /system) == 1 ] || umount /system")
-    update_script.mount("/system")
-    update_script.add("[ -f /system/build.prop ] || {", end="\n")
-    update_script.ui_print(" ", space_no=2)
-    update_script.abort("Failed to mount /system!", space_no=2)
-    update_script.add("}")
-    update_script.blank_line()
-    update_script.ui_print("Verify Rom Version ...")
-    update_script.add("[ $(file_getprop /system/build.prop %s) == \"%s\" ] || {"
-                      % (check_flag[0], check_flag[1]), end="\n")
-    update_script.ui_print(" ", space_no=2)
-    update_script.abort("Failed! Versions Mismatch!", space_no=2)
-    update_script.add("}")
-    if len(compare_pj.diff_files):
-        update_script.blank_line()
-        cn.mkdir(os.path.join(ota_path, "patch"))
-        update_script.ui_print("Unpack Patch Files ...")
-        update_script.package_extract_dir("patch", "/tmp/patch")
-        update_script.blank_line()
-        update_script.ui_print("Check System Files ...")
-        patch_script_list = []
-        # 哈希相同但信息不同的文件
-        compare_pj.diff_info_files = []
-        # 符号链接指向不同的文件
-        compare_pj.diff_slink_files = []
-        # 卡刷时直接替换(而不是打补丁)的文件(名)
-        ignore_names = {"build.prop",
-                        "recovery-from-boot.p",
-                        "install-recovery.sh",
-                        "applypatch",}
-        for f1, f2 in compare_pj.diff_files:
-            # 差异文件patch check
-            if f1.slink != f2.slink:
-                compare_pj.diff_slink_files.append(f2)
-                continue
-            if f1.sha1 == f2.sha1:
-                compare_pj.diff_info_files.append(f2)
-                continue
-            if f2.name in ignore_names:
-                compare_pj.FL_2_isolated_files.append(f2)
-                cn.file2file(f2.path,
-                             os.path.join(ota_path, "system", f2.rela_path))
-                continue
-            sys.stderr.write("Generating patch file for %-99s\r" % f2.spath)
-            temp_p_file = tempfile.mktemp(".p.tmp")
-            if not cn.get_bsdiff(f1, f2, temp_p_file):
-                # 如果生成补丁耗时太长 则取消生成补丁 直接替换文件
-                compare_pj.FL_2_isolated_files.append(f2)
-                cn.file2file(f2.path,
-                             os.path.join(ota_path, "system", f2.rela_path))
-                cn.remove_path(temp_p_file)
-                continue
-            p_path = os.path.join(ota_path, "patch",
-                                  "system", f2.rela_path + ".p")
-            p_spath = p_path.replace(ota_path, "/tmp", 1).replace("\\", "/")
-            cn.file2file(temp_p_file, p_path, move=True)
-            update_script.apply_patch_check(f2.spath, f1.sha1, f2.sha1)
-            patch_script_list.append((f2.spath, f2.sha1, len(f2),
-                                      f1.sha1, p_spath))
+        self.final()
+
+    def unpack_zip(self):
+        print("\nUnpacking OLD Rom...")
+        self.p1_path = cn.extract_zip(self.old_package)
+        print("\nUnpacking NEW Rom...")
+        self.p2_path = cn.extract_zip(self.new_package)
+
+    def is_pt(self):
+        return all((
+            os.path.exists(os.path.join(self.p1_path, "vendor.new.dat.br")),
+            os.path.exists(os.path.join(self.p2_path, "vendor.new.dat.br"))
+        ))
+
+    @staticmethod
+    def pars_init(bool_1, bool_2):
+        str_1 = "OLD"
+        if bool_1:
+            str_1 = "NEW"
+        str_2 = "system"
+        if bool_2:
+            str_2 = "vendor"
+        return str_1, str_2
+
+    def unpack_dat(self, px_path, is_new, is_vendor=False):
+        oon, sov = self.pars_init(is_new, is_vendor)
+        if os.path.exists(os.path.join(px_path, "%s.new.dat.br" % sov)):
+            print("\nUnpacking %s Rom's %s.new.dat.br..." % (oon, sov))
+            cn.extract_br(os.path.join(px_path, "%s.new.dat.br" % sov))
+        print("\nUnpacking %s Rom's %s.new.dat..." % (oon, sov))
+        px_img = cn.extract_sdat(os.path.join(px_path, "%s.transfer.list" % sov),
+                                 os.path.join(px_path, "%s.new.dat" % sov),
+                                 os.path.join(px_path, "%s.img" % sov))
+        cn.remove_path(os.path.join(px_path, "%s.new.dat.br" % sov))
+        cn.remove_path(os.path.join(px_path, "%s.new.dat" % sov))
+        return px_img
+
+    def unpack_img(self, img_path, is_new, is_vendor=False):
+        oon, sov = self.pars_init(is_new, is_vendor)
+        print("\nUnpacking %s Rom's %s.img..." % (oon, sov))
+        if cn.is_win():
+            spath = cn.extract_img(img_path)
+            cn.remove_path(img_path)
+        else:
+            spath = cn.mount_img(img_path)
+        return spath
+
+    def gen_file_list(self, file_path, is_new, is_vendor=False):
+        oon, sov = self.pars_init(is_new, is_vendor)
+        print("\nRetrieving %s Rom's %s file list..." % (oon, sov))
+        px = FL(file_path, is_vendor)
         cn.clean_line()
-        update_script.blank_line()
-        update_script.ui_print("Patch System Files ...")
-        for arg in patch_script_list:
-            # 差异文件patch命令
-            update_script.apply_patch(*arg)
-        update_script.delete_recursive("/tmp/patch")
-    update_script.blank_line()
-    update_script.ui_print("Remove Unneeded Files ...")
-    for d in compare_pj.FL_1_isolated_dirs_spaths:
-        # 删除目录
-        update_script.delete_recursive(d)
-    for f in compare_pj.FL_1_isolated_files_spaths:
-        # 删除文件
-        if f not in compare_pj.ignore_del_files_spaths:
-            update_script.delete(f)
-    for d in compare_pj.diff_dirs:
-        # 差异符号链接目录删除
-        if d.slink:
-            update_script.delete(d.spath)
-    for f in compare_pj.diff_slink_files:
-        # 差异符号链接文件删除
-        update_script.delete(f.spath)
-    update_script.blank_line()
-    update_script.ui_print("Unpack New Files ...")
-    if len(compare_pj.FL_2_isolated_dirs + compare_pj.FL_2_isolated_files):
-        update_script.package_extract_dir("system", "/system")
-    update_script.blank_line()
-    update_script.ui_print("Create Symlinks ...")
-    for f in (compare_pj.FL_2_isolated_dirs +
-              compare_pj.FL_2_isolated_files +
-              compare_pj.diff_dirs +
-              compare_pj.diff_slink_files):
-        # 新增符号链接目录 & 新增符号链接文件 &
-        # 差异符号链接目录 & 差异符号链接文件 建立符号链接
-        if f.slink:
-            update_script.symlink(f.spath, f.slink)
-    update_script.blank_line()
-    update_script.ui_print("Set Metadata ...")
-    for f in (compare_pj.FL_2_isolated_dirs +
-              compare_pj.FL_2_isolated_files +
-              compare_pj.diff_dirs +
-              compare_pj.diff_info_files +
-              compare_pj.diff_slink_files):
-        # 新增目录 & 新增文件 &
-        # 差异目录 & 差异信息文件 & 差异符号链接文件 信息设置
-        update_script.set_metadata(f.spath, f.uid, f.gid,
-                                   f.perm, selabel=f.selabel)
-    update_script.blank_line()
-    update_script.add("sync")
-    update_script.umount("/system")
-    update_script.blank_line()
-    update_script.ui_print("Flash boot.img ...")
-    update_script.package_extract_file("boot.img", bootimg_block)
-    update_script.blank_line()
-    update_script.delete_recursive("/cache/*")
-    update_script.delete_recursive("/data/dalvik-cache")
-    update_script.blank_line()
-    update_script.ui_print("Done!")
+        print("Search completed\nFound %s files, %s directories"
+              % (len(px), len(px.dirlist)))
+        return px
 
-    update_script_path = os.path.join(ota_path, "META-INF", "com",
-                                      "google", "android")
-    cn.mkdir(update_script_path)
-    new_ub = os.path.join(update_script_path, "update-binary")
-    with open(new_ub, "w", encoding="UTF-8", newline="\n") as f:
-        for line in update_script.script:
-            f.write(line)
-    new_uc = os.path.join(update_script_path, "updater-script")
-    with open(new_uc, "w", encoding="UTF-8", newline="\n") as f:
-        f.write("# Dummy file; update-binary is a shell script.\n")
+    def do_compare(self):
+        print("\nStart comparison system files...")
+        self.cps = FL_Compare(self.p1_sfl, self.p2_sfl)
+        print("\nComparative completion!")
+        if self.pt_flag:
+            print("\nStart comparison vendor files...")
+            self.cpv = FL_Compare(self.p1_vfl, self.p2_vfl)
+            print("\nComparative completion!")
 
-    print("\nMaking OTA package...")
-    ota_zip = cn.make_zip(ota_path)
-    ota_zip_real = os.path.join(os.path.split(old_package)[0], ota_package_name)
-    cn.file2file(ota_zip, ota_zip_real, move=True)
+    def get_rom_info(self):
+        print("\nGetting rom information...")
+        self.p1_prop = cn.get_build_prop(os.path.join(self.p1_sfl.fullpath, "build.prop"))
+        self.p2_prop = cn.get_build_prop(os.path.join(self.p2_sfl.fullpath, "build.prop"))
+        self.model = self.p2_prop.get("ro.product.device", "Unknown")
+        self.arch = "arm"
+        self.is_64bit = False
+        if self.p2_prop.get("ro.product.cpu.abi") == "x86":
+            self.arch = "x86"
+        if self.p2_prop.get("ro.product.cpu.abi2") == "x86":
+            self.arch = "x86"
+        if int(self.p2_prop.get("ro.build.version.sdk", "0")) >= 21:
+            if self.p2_prop.get("ro.product.cpu.abi") == "arm64-v8a":
+                self.arch = "arm64"
+                self.is_64bit = True
+            if self.p2_prop.get("ro.product.cpu.abi") == "x86_64":
+                self.arch = "x64"
+                self.is_64bit = True
+        self.verify_info = compare_build_prop(self.p1_prop, self.p2_prop)
+        print("\nModel: %s" % self.model)
+        print("\nArch: %s" % self.arch)
+        print("\nRom verify info: %s=%s" % self.verify_info[:-1])
 
-    clean_temp()
-    print("\nDone!")
-    print("\nOutput OTA package: %s !" % ota_zip_real)
-    sys.exit()
+    def get_bootimg_block(self):
+        old_script = os.path.join(self.p2_path, "META-INF", "com",
+                                  "google", "android", "updater-script")
+        cn.is_exist_path(old_script)
+        self.bootimg_block = ""
+        with open(old_script, "r", encoding="UTF-8", errors="ignore") as f:
+            for line in f.readlines():
+                if line.strip().startswith("package_extract_file"):
+                    if "\"boot.img\"" in line:
+                        self.bootimg_block = cn.parameter_split(line.strip())[-1]
+        if not self.bootimg_block:
+            raise Exception("Can not get boot.img block!")
+
+    def cp_files_1st(self):
+        print("\nCopying files...")
+        new_bootimg = os.path.join(self.p2_path, "boot.img")
+        cn.is_exist_path(new_bootimg)
+        cn.file2dir(new_bootimg, self.ota_path)
+        for f in self.cps.FL_2_isolated_files:
+            sys.stderr.write("Copying file %-99s\r" % f.spath)
+            cn.file2file(f.path, os.path.join(self.ota_path, "system", f.rela_path))
+        if self.pt_flag:
+            for f in self.cpv.FL_2_isolated_files:
+                sys.stderr.write("Copying file %-99s\r" % f.spath)
+                cn.file2file(f.path, os.path.join(self.ota_path, "vendor", f.rela_path))
+        cn.clean_line()
+        cn.file2dir(cn.bin_call("applypatch_old"), os.path.join(self.ota_path, "bin"))
+        cn.file2dir(cn.bin_call("applypatch_old_64"), os.path.join(self.ota_path, "bin"))
+
+    def updater_init(self):
+        print("\nGenerating script...")
+        self.us = Updater(self.is_64bit)
+        if self.model != "Unknown":
+            self.us.check_device(self.model, self.ext_models)
+            self.us.blank_line()
+        self.us.ui_print("Updating from %s" % self.verify_info[1])
+        self.us.ui_print("to %s" % self.verify_info[2])
+        self.us.ui_print("It may take several minutes, please be patient.")
+        self.us.ui_print(" ")
+        self.us.blank_line()
+        self.us.ui_print("Remount /system ...")
+        self.us.add("[ $(is_mounted /system) == 1 ] || umount /system")
+        self.us.mount("/system")
+        self.us.add("[ -f /system/build.prop ] || {", end="\n")
+        self.us.ui_print(" ", space_no=2)
+        self.us.abort("Failed to mount /system!", space_no=2)
+        self.us.add("}")
+        self.us.blank_line()
+        if self.pt_flag:
+            self.us.ui_print("Remount /vendor ...")
+            self.us.add("[ $(is_mounted /vendor) == 1 ] || umount /vendor")
+            self.us.mount("/vendor")
+            self.us.blank_line()
+        self.us.ui_print("Verify Rom Version ...")
+        self.us.add("[ $(file_getprop /system/build.prop %s) == \"%s\" ] || {"
+                    % (self.verify_info[0], self.verify_info[1]), end="\n")
+        self.us.ui_print(" ", space_no=2)
+        self.us.abort("Failed! Versions Mismatch!", space_no=2)
+        self.us.add("}")
+
+    def diff_files_patch_init(self):
+        # patch check命令参数列表
+        self.patch_check_script_list = []
+        # patch 命令参数列表
+        self.patch_do_script_list = []
+        # 哈希相同但信息不同的文件
+        self.cps.diff_info_files = []
+        # 符号链接指向不同的文件
+        self.cps.diff_slink_files = []
+        # 卡刷时直接替换(而不是打补丁)的文件(名)
+        self.cps.ignore_names = {"build.prop",
+                                 "recovery-from-boot.p",
+                                 "install-recovery.sh",
+                                 "applypatch",}
+        if self.pt_flag:
+            self.cpv.diff_info_files = []
+            self.cpv.diff_slink_files = []
+            self.cpv.ignore_names = set()
+        cn.mkdir(os.path.join(self.ota_path, "patch"))
+
+    def diff_files_patch_system(self):
+        if len(self.cps.diff_files):
+            for f1, f2 in self.cps.diff_files:
+                if f1.slink != f2.slink:
+                    self.cps.diff_slink_files.append(f2)
+                    continue
+                if f1.sha1 == f2.sha1:
+                    self.cps.diff_info_files.append(f2)
+                    continue
+                if f2.name in self.cps.ignore_names:
+                    self.cps.FL_2_isolated_files.append(f2)
+                    cn.file2file(f2.path,
+                                 os.path.join(self.ota_path, "system", f2.rela_path))
+                    continue
+                sys.stderr.write("Generating patch file for %-99s\r" % f2.spath)
+                temp_p_file = tempfile.mktemp(".p.tmp")
+                if not cn.get_bsdiff(f1, f2, temp_p_file):
+                    # 如果生成补丁耗时太长 则取消生成补丁 直接替换文件
+                    self.cps.FL_2_isolated_files.append(f2)
+                    cn.file2file(f2.path,
+                                 os.path.join(self.ota_path, "system", f2.rela_path))
+                    cn.remove_path(temp_p_file)
+                    continue
+                p_path = os.path.join(self.ota_path, "patch", "system", f2.rela_path + ".p")
+                p_spath = p_path.replace(self.ota_path, "/tmp", 1).replace("\\", "/")
+                cn.file2file(temp_p_file, p_path, move=True)
+                self.patch_check_script_list.append((f2.spath, f1.sha1, f2.sha1))
+                self.patch_do_script_list.append((f2.spath, f2.sha1, len(f2), f1.sha1, p_spath))
+            cn.clean_line()
+
+    def diff_files_patch_vendor(self):
+        if len(self.cpv.diff_files):
+            for f1, f2 in self.cpv.diff_files:
+                if f1.slink != f2.slink:
+                    self.cpv.diff_slink_files.append(f2)
+                    continue
+                if f1.sha1 == f2.sha1:
+                    self.cpv.diff_info_files.append(f2)
+                    continue
+                if f2.name in self.cpv.ignore_names:
+                    self.cpv.FL_2_isolated_files.append(f2)
+                    cn.file2file(f2.path,
+                                 os.path.join(self.ota_path, "vendor", f2.rela_path))
+                    continue
+                sys.stderr.write("Generating patch file for %-99s\r" % f2.spath)
+                temp_p_file = tempfile.mktemp(".p.tmp")
+                if not cn.get_bsdiff(f1, f2, temp_p_file):
+                    self.cpv.FL_2_isolated_files.append(f2)
+                    cn.file2file(f2.path,
+                                 os.path.join(self.ota_path, "vendor", f2.rela_path))
+                    cn.remove_path(temp_p_file)
+                    continue
+                p_path = os.path.join(self.ota_path, "patch", "vendor", f2.rela_path + ".p")
+                p_spath = p_path.replace(self.ota_path, "/tmp", 1).replace("\\", "/")
+                cn.file2file(temp_p_file, p_path, move=True)
+                self.patch_check_script_list.append((f2.spath, f1.sha1, f2.sha1))
+                self.patch_do_script_list.append((f2.spath, f2.sha1, len(f2), f1.sha1, p_spath))
+            cn.clean_line()
+
+    def diff_files_patch_write(self):
+        self.us.blank_line()
+        self.us.ui_print("Unpack Patch Files ...")
+        self.us.package_extract_dir("patch", "/tmp/patch")
+        self.us.package_extract_dir("bin", "/system/bin")
+        self.us.add("chmod 0755 /system/bin/applypatch_old")
+        self.us.add("chmod 0755 /system/bin/applypatch_old_64")
+        self.us.blank_line()
+        self.us.ui_print("Check Files ...")
+        for arg in self.patch_check_script_list:
+            # 差异文件patch check
+            self.us.apply_patch_check(*arg)
+        self.us.blank_line()
+        self.us.ui_print("Patch Files ...")
+        for arg in self.patch_do_script_list:
+            # 差异文件patch
+            self.us.apply_patch(*arg)
+        self.us.blank_line()
+        self.us.delete_recursive("/tmp/patch")
+        self.us.delete("/system/bin/applypatch_old")
+        self.us.delete("/system/bin/applypatch_old_64")
+
+    def remove_init(self):
+        self.us.blank_line()
+        self.us.ui_print("Remove Unneeded Files ...")
+
+    def remove_dirs(self):
+        for d in self.cps.FL_1_isolated_dirs_spaths:
+            # 删除目录
+            self.us.delete_recursive(d)
+        if self.pt_flag:
+            for d in self.cpv.FL_1_isolated_dirs_spaths:
+                self.us.delete_recursive(d)
+
+    def remove_files(self):
+        for f in self.cps.FL_1_isolated_files_spaths:
+            # 删除文件
+            if f not in self.cps.ignore_del_files_spaths:
+                self.us.delete(f)
+        if self.pt_flag:
+            for f in self.cpv.FL_1_isolated_files_spaths:
+                if f not in self.cpv.ignore_del_files_spaths:
+                    self.us.delete(f)
+
+    def remove_slink_dirs(self):
+        for d in self.cps.diff_dirs:
+            # 差异符号链接目录删除
+            if d.slink:
+                self.us.delete(d.spath)
+        if self.pt_flag:
+            for d in self.cpv.diff_dirs:
+                if d.slink:
+                    self.us.delete(d.spath)
+
+    def remove_slink_files(self):
+        for f in self.cps.diff_slink_files:
+            # 差异符号链接文件删除
+            self.us.delete(f.spath)
+        if self.pt_flag:
+            for f in self.cpv.diff_slink_files:
+                self.us.delete(f.spath)
+
+    def package_extract(self):
+        self.us.blank_line()
+        self.us.ui_print("Unpack New Files ...")
+        if len(self.cps.FL_2_isolated_dirs + self.cps.FL_2_isolated_files):
+            self.us.package_extract_dir("system", "/system")
+        if self.pt_flag:
+            if len(self.cpv.FL_2_isolated_dirs + self.cpv.FL_2_isolated_files):
+                self.us.package_extract_dir("vendor", "/vendor")
+
+    def create_symlinks(self):
+        self.us.blank_line()
+        self.us.ui_print("Create Symlinks ...")
+        for f in (self.cps.FL_2_isolated_dirs +
+                  self.cps.FL_2_isolated_files +
+                  self.cps.diff_dirs +
+                  self.cps.diff_slink_files):
+            # 新增符号链接目录 & 新增符号链接文件 &
+            # 差异符号链接目录 & 差异符号链接文件 建立符号链接
+            if f.slink:
+                self.us.symlink(f.spath, f.slink)
+        if self.pt_flag:
+            for f in (self.cpv.FL_2_isolated_dirs +
+                      self.cpv.FL_2_isolated_files +
+                      self.cpv.diff_dirs +
+                      self.cpv.diff_slink_files):
+                if f.slink:
+                    self.us.symlink(f.spath, f.slink)
+
+    def set_metadata(self):
+        self.us.blank_line()
+        self.us.ui_print("Set Metadata ...")
+        for f in (self.cps.FL_2_isolated_dirs +
+                  self.cps.FL_2_isolated_files +
+                  self.cps.diff_dirs +
+                  self.cps.diff_info_files +
+                  self.cps.diff_slink_files):
+            # 新增目录 & 新增文件 &
+            # 差异目录 & 差异信息文件 & 差异符号链接文件 信息设置
+            self.us.set_metadata(f.spath, f.uid, f.gid,
+                                 f.perm, selabel=f.selabel)
+        if self.pt_flag:
+            for f in (self.cpv.FL_2_isolated_dirs +
+                      self.cpv.FL_2_isolated_files +
+                      self.cpv.diff_dirs +
+                      self.cpv.diff_info_files +
+                      self.cpv.diff_slink_files):
+                self.us.set_metadata(f.spath, f.uid, f.gid,
+                                     f.perm, selabel=f.selabel)
+
+    def updater_end(self):
+        self.us.blank_line()
+        self.us.add("sync")
+        self.us.umount("/system")
+        if self.pt_flag:
+            self.us.umount("/vendor")
+        self.us.blank_line()
+        self.us.ui_print("Flash boot.img ...")
+        self.us.package_extract_file("boot.img", self.bootimg_block)
+        self.us.blank_line()
+        self.us.delete_recursive("/cache/*")
+        self.us.delete_recursive("/data/dalvik-cache")
+        self.us.blank_line()
+        self.us.ui_print("Done!")
+
+    def updater_write(self):
+        update_script_path = os.path.join(self.ota_path, "META-INF", "com",
+                                          "google", "android")
+        cn.mkdir(update_script_path)
+        new_ub = os.path.join(update_script_path, "update-binary")
+        with open(new_ub, "w", encoding="UTF-8", newline="\n") as f:
+            for line in self.us.script:
+                f.write(line)
+        new_uc = os.path.join(update_script_path, "updater-script")
+        with open(new_uc, "w", encoding="UTF-8", newline="\n") as f:
+            f.write("# Dummy file; update-binary is a shell script.\n")
+
+    def final(self):
+        print("\nMaking OTA package...")
+        ota_zip = cn.make_zip(self.ota_path)
+        ota_zip_real = os.path.join(os.path.split(self.old_package)[0], self.ota_package_name)
+        cn.file2file(ota_zip, ota_zip_real, move=True)
+
+        self.clean_temp()
+        print("\nDone!")
+        print("\nOutput OTA package: %s !" % ota_zip_real)
+        sys.exit()
+
+    @staticmethod
+    def clean_temp():
+        print("\nCleaning temp files...")
+        for d in os.listdir(tempfile.gettempdir()):
+            if d.startswith("GOTAPGS_"):
+                if not cn.is_win():
+                    os.system("sudo umount %s > /dev/null"
+                              % os.path.join(tempfile.gettempdir(), d, "system_"))
+                cn.remove_path(os.path.join(tempfile.gettempdir(), d))
 
 def adj_zip_name(zip_name):
     new_zip_name = str(zip_name)
     if not re.match(r"[\S]*\.[Zz][Ii][Pp]", new_zip_name):
         new_zip_name += ".zip"
     return new_zip_name
-
-def clean_temp():
-    print("\nCleaning temp files...")
-    for d in os.listdir(tempfile.gettempdir()):
-        if d.startswith("GOTAPGS_"):
-            if not cn.is_win():
-                os.system("sudo umount %s > /dev/null"
-                          % os.path.join(tempfile.gettempdir(), d, "system_"))
-            cn.remove_path(os.path.join(tempfile.gettempdir(), d))
 
 if __name__ == "__main__":
 

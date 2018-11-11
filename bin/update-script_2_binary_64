@@ -124,7 +124,7 @@ sha1_check() {
 
 # apply_patch <src_file> <tgt_file> <tgt_sha1> <tgt_size> [<src_sha1_1>:<patch1> [<src_sha1_2>:<patch2> ...]]
 apply_patch() {
-  LD_LIBRARY_PATH=/system/lib64 applypatch "$@";
+  LD_LIBRARY_PATH=/system/lib64 applypatch "$@" || LD_LIBRARY_PATH=/system/lib64 applypatch_old_64 "$@";
 }
 
 # apply_patch_check <file> [<sha1_hex> [<sha1_hex2> ...]]

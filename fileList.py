@@ -9,12 +9,13 @@ import common as cn
 
 class FL_Base:
 
-    def __init__(self, path, root_path):
+    def __init__(self, path, root_path, vendor_flag):
         self.uid = self.gid = self.perm = self.slink = ""
         # 文件绝对路径
         self.path = path
         # 文件"根"路径
         self.root_path = root_path
+        self.vendor_flag = vendor_flag
         # 文件父目录路径 & 文件名
         self.pare_path, self.name = os.path.split(path)
         # 文件相对"根"路径的相对路径
@@ -23,7 +24,10 @@ class FL_Base:
         else:
             self.rela_path = ""
         # 文件在卡刷包中存在的路径
-        self.spath = "/system/" + self.rela_path.replace("\\", "/")
+        if self.vendor_flag:
+            self.spath = "/vendor/" + self.rela_path.replace("\\", "/")
+        else:
+            self.spath = "/system/" + self.rela_path.replace("\\", "/")
         if not cn.is_win():
             self.set_info(self.get_stat(self.path))
 
@@ -43,8 +47,8 @@ class FL_Base:
 
 class FL_File(FL_Base):
 
-    def __init__(self, path, root_path=""):
-        super(FL_File, self).__init__(path, root_path)
+    def __init__(self, path, root_path, vendor_flag):
+        super(FL_File, self).__init__(path, root_path, vendor_flag)
 
         # 计算文件sha1
         if self.slink:
@@ -87,9 +91,10 @@ class FL:
     # 检索文件时要忽略的文件名列表
     skip_list = (".journal",)
 
-    def __init__(self, fullpath):
+    def __init__(self, fullpath, vendor_flag=False):
         cn.is_exist_path(fullpath)
         self.fullpath = fullpath
+        self.vendor_flag = vendor_flag
         self.basepath, self.dirpath = os.path.split(fullpath)
 
         if cn.is_win():
@@ -103,14 +108,14 @@ class FL:
                 if f in self.skip_list:
                     continue
                 fpath = os.path.join(root, f)
-                new_f = FL_File(fpath, self.fullpath)
+                new_f = FL_File(fpath, self.fullpath, self.vendor_flag)
                 if cn.is_win():
                     new_f.set_info(self.statfile_info[new_f.rela_path])
                 self.filelist.append(new_f)
                 sys.stderr.write("Found file %-99s\r" % f)
             for d in dirs:
                 dpath = os.path.join(root, d)
-                new_d = FL_Dir(dpath, self.fullpath)
+                new_d = FL_Dir(dpath, self.fullpath, self.vendor_flag)
                 if cn.is_win():
                     new_d.set_info(self.statfile_info[new_d.rela_path])
                 self.dirlist.append(new_d)
@@ -139,13 +144,18 @@ class FL:
 
     def set_selabels(self, fc_basepath):
         fc_path = ""
-        for fc_name in ("file_contexts.bin", "plat_file_contexts.bin"):
+        if self.vendor_flag:
+            fc_tuple = ("vendor_file_contexts", "nonplat_file_contexts",
+                        "file_contexts")
+        else:
+            fc_tuple = ("plat_file_contexts", "file_contexts")
+        for fc_name in fc_tuple:
             fc_path_tmp = os.path.join(fc_basepath, fc_name)
             if os.path.exists(fc_path_tmp):
                 fc_path = fc_path_tmp
                 break
-            if os.path.exists(fc_path_tmp[:-4]):
-                fc_path = fc_path_tmp[:-4]
+            if os.path.exists(fc_path_tmp + ".bin"):
+                fc_path = fc_path_tmp + ".bin"
                 break
         if not fc_path:
             return
