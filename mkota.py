@@ -156,7 +156,7 @@ def main(old_package, new_package, ota_package_name, ext_models=tuple()):
         ignore_names = {"build.prop",
                         "recovery-from-boot.p",
                         "install-recovery.sh",
-						"applypatch",}
+                        "applypatch",}
         for f1, f2 in compare_pj.diff_files:
             # 差异文件patch check
             if f1.slink != f2.slink:
@@ -294,19 +294,19 @@ if __name__ == "__main__":
         old_package = str(sys.argv[1])
         new_package = str(sys.argv[2])
         ota_package_name = "OTA.zip"
-    if len(sys.argv) == 3:
-        main(old_package, new_package, ota_package_name)
-    if len(sys.argv) == 4:
-        if str(sys.argv[3]) != "--ext-models":
-            ota_package_name = adj_zip_name(sys.argv[3])
-        main(old_package, new_package, ota_package_name)
-    if len(sys.argv) >= 5:
-        if str(sys.argv[3]) == "--ext-models":
-            ext_models = tuple(sys.argv[4:])
-        else:
-            ota_package_name = adj_zip_name(sys.argv[3])
-            ext_models = tuple(sys.argv[5:])
-        main(old_package, new_package, ota_package_name, ext_models)
+        if len(sys.argv) == 3:
+            main(old_package, new_package, ota_package_name)
+        if len(sys.argv) == 4:
+            if str(sys.argv[3]) != "--ext-models":
+                ota_package_name = adj_zip_name(sys.argv[3])
+            main(old_package, new_package, ota_package_name)
+        if len(sys.argv) >= 5:
+            if str(sys.argv[3]) == "--ext-models":
+                ext_models = tuple(sys.argv[4:])
+            else:
+                ota_package_name = adj_zip_name(sys.argv[3])
+                ext_models = tuple(sys.argv[5:])
+            main(old_package, new_package, ota_package_name, ext_models)
     print("Usage:", os.path.split(__file__)[1],
 '''<old_package_path> <new_package_path> [ota_package_name] [--ext-models [model_1] [model_2] ...]
 
