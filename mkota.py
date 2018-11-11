@@ -155,7 +155,8 @@ def main(old_package, new_package, ota_package_name, ext_models=tuple()):
         # 卡刷时直接替换(而不是打补丁)的文件(名)
         ignore_names = {"build.prop",
                         "recovery-from-boot.p",
-                        "install-recovery.sh",}
+                        "install-recovery.sh",
+						"applypatch",}
         for f1, f2 in compare_pj.diff_files:
             # 差异文件patch check
             if f1.slink != f2.slink:
