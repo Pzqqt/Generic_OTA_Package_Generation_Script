@@ -457,8 +457,9 @@ class main():
         for d in os.listdir(tempfile.gettempdir()):
             if d.startswith("GOTAPGS_"):
                 if not cn.is_win():
-                    os.system("sudo umount %s > /dev/null"
-                              % os.path.join(tempfile.gettempdir(), d, "system_"))
+                    for mdir in ("system_", "vendor_"):
+                        os.system("sudo umount %s > /dev/null"
+                                  % os.path.join(tempfile.gettempdir(), d, mdir))
                 cn.remove_path(os.path.join(tempfile.gettempdir(), d))
 
 def adj_zip_name(zip_name):
