@@ -306,9 +306,9 @@ class main():
         self.us.blank_line()
         self.us.ui_print("Unpack Patch Files ...")
         self.us.package_extract_dir("patch", "/tmp/patch")
-        self.us.package_extract_dir("bin", "/system/bin")
-        self.us.add("chmod 0755 /system/bin/applypatch_old")
-        self.us.add("chmod 0755 /system/bin/applypatch_old_64")
+        self.us.package_extract_dir("bin", "/tmp/bin")
+        self.us.add("chmod 0755 /tmp/bin/applypatch_old")
+        self.us.add("chmod 0755 /tmp/bin/applypatch_old_64")
         self.us.blank_line()
         self.us.ui_print("Check Files ...")
         for arg in self.patch_check_script_list:
@@ -321,8 +321,7 @@ class main():
             self.us.apply_patch(*arg)
         self.us.blank_line()
         self.us.delete_recursive("/tmp/patch")
-        self.us.delete("/system/bin/applypatch_old")
-        self.us.delete("/system/bin/applypatch_old_64")
+        self.us.delete_recursive("/tmp/bin")
 
     def remove_init(self):
         self.us.blank_line()
