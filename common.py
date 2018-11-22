@@ -222,9 +222,11 @@ def get_file_contexts(file_path):
 def get_selabel(dic, path):
     # 通过检索get_file_contexts函数返回的dic
     # 获取path的SE上下文属性 匹配最后一个结果
-    for reg in list(dic.keys())[::-1]:
+    k = ""
+    for reg in dic.keys():
         if re.match(reg, path):
-            return dic[reg]
+            k = dic[reg]
+    return k
 
 def get_selabel_linux(path):
     # 获取path的SE上下文属性
