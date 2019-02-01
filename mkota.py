@@ -443,7 +443,10 @@ class main():
     def final(self):
         print("\nMaking OTA package...")
         ota_zip = cn.make_zip(self.ota_path)
-        ota_zip_real = os.path.join(os.path.split(self.old_package)[0], self.ota_package_name)
+        if self.ota_package_name.startswith("/") or re.match(r"[A-Za-z]:\\*", self.ota_package_name):
+            ota_zip_real = self.ota_package_name
+        else:
+            ota_zip_real = os.path.normpath(os.path.join(os.getcwd(), self.ota_package_name))
         cn.file2file(ota_zip, ota_zip_real, move=True)
 
         self.clean_temp()
