@@ -11,6 +11,7 @@ import os
 import hashlib
 import tempfile
 import re
+from argparse import ArgumentParser
 
 __version__ = "v1.1"
 
@@ -475,29 +476,13 @@ if __name__ == "__main__":
 
     print("\nGeneric OTA Package Generation Script %s\nBy Pzqqt" % __version__)
 
-    if len(sys.argv) >= 3:
-        old_package = str(sys.argv[1])
-        new_package = str(sys.argv[2])
-        ota_package_name = "OTA.zip"
-        if len(sys.argv) == 3:
-            main(old_package, new_package, ota_package_name)
-        if len(sys.argv) == 4:
-            if str(sys.argv[3]) != "--ext-models":
-                ota_package_name = adj_zip_name(sys.argv[3])
-            main(old_package, new_package, ota_package_name)
-        if len(sys.argv) >= 5:
-            if str(sys.argv[3]) == "--ext-models":
-                ext_models = tuple(sys.argv[4:])
-            else:
-                ota_package_name = adj_zip_name(sys.argv[3])
-                ext_models = tuple(sys.argv[5:])
-            main(old_package, new_package, ota_package_name, ext_models)
-    print("Usage:", os.path.split(__file__)[1],
-'''<old_package_path> <new_package_path> [ota_package_name] [--ext-models [model_1] [model_2] ...]
+    parser = ArgumentParser()
+    parser.add_argument("old_package", help="old package path")
+    parser.add_argument("new_package", help="new package path")
+    parser.add_argument("-o", "--output", default="OTA.zip", help=" output OTA package name/path (default OTA.zip)(default: ./OTA.zip)")
+    parser.add_argument("-e", "--ext-models", help="additional model that allows for model verification(default: None)")
 
-    <old_package_path>                     : old package file path
-    <new_package_path>                     : new package file path
-    [ota_package_name]                     : custom generated OTA package name (default OTA.zip)
-    [--ext-models [model_1] [model_2] ...] : additional model that allows for model verification
-''')
+    args = parser.parse_args()
+
+    main(args.old_package, args.new_package, args.output, args.ext_models)
     sys.exit()
