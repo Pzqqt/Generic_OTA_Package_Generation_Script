@@ -237,7 +237,9 @@ class main():
         self.cps.ignore_names = {"build.prop",
                                  "recovery-from-boot.p",
                                  "install-recovery.sh",
-                                 "applypatch",}
+                                 "applypatch",
+                                 "backuptool.functions",
+                                 "backuptool.sh",}
         if self.pt_flag:
             self.cpv.diff_info_files = []
             self.cpv.diff_slink_files = []
