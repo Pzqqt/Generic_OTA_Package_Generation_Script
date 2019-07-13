@@ -82,31 +82,35 @@ class FL_Compare:
 
     def __dir_compare(self):
         self.diff_dirs = []
-        FL_1_dirs_cp = [d for d in self.FL_1.dirlist
-                        if d.spath not in self.FL_1_isolated_dirs_spaths]
-        FL_2_dirs_cp = [d for d in self.FL_2.dirlist
-                        if d.spath not in self.FL_2_isolated_dirs_spaths]
+        FL_1_dirs_cp = sorted(
+            [d for d in self.FL_1.dirlist if d.spath not in self.FL_1_isolated_dirs_spaths],
+            key=lambda x: x.spath
+        )
+        FL_2_dirs_cp = sorted(
+            [d for d in self.FL_2.dirlist if d.spath not in self.FL_2_isolated_dirs_spaths],
+            key=lambda x: x.spath
+        )
         assert len(FL_1_dirs_cp) == len(FL_2_dirs_cp)
-        i = 0
-        while i < len(FL_1_dirs_cp):
+        for i in range(len(FL_1_dirs_cp)):
             if FL_1_dirs_cp[i] != FL_2_dirs_cp[i]:
                 print("Dir %s has changed!" % FL_1_dirs_cp[i].spath)
                 self.diff_dirs.append(FL_2_dirs_cp[i])
-            i += 1
 
     def __file_compare(self):
         self.diff_files = []
-        FL_1_files_cp = [f for f in self.FL_1
-                         if f.spath not in self.FL_1_isolated_files_spaths]
-        FL_2_files_cp = [f for f in self.FL_2
-                         if f.spath not in self.FL_2_isolated_files_spaths]
+        FL_1_files_cp = sorted(
+            [f for f in self.FL_1 if f.spath not in self.FL_1_isolated_files_spaths],
+            key=lambda x: x.spath
+        )
+        FL_2_files_cp = sorted(
+            [f for f in self.FL_2 if f.spath not in self.FL_2_isolated_files_spaths],
+            key=lambda x: x.spath
+        )
         assert len(FL_1_files_cp) == len(FL_2_files_cp)
-        i = 0
-        while i < len(FL_1_files_cp):
+        for i in range(len(FL_1_files_cp)):
             if FL_1_files_cp[i] != FL_2_files_cp[i]:
                 print("File %s has changed!" % FL_1_files_cp[i].spath)
                 self.diff_files.append((FL_1_files_cp[i], FL_2_files_cp[i]))
-            i += 1
 
 def compare_build_prop(dic_1, dic_2):
     if not all((type(dic_1) is dict, type(dic_2) is dict)):
