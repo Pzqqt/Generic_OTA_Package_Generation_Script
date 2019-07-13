@@ -100,7 +100,7 @@ def extract_bootimg(file_path):
     # 解包boot.img文件
     # 用于win环境
     is_exist_path(file_path, file_name="boot.img")
-    workdir_bak = os.path.abspath(".")
+    workdir_bak = os.getcwd()
     bimg_path = os.path.join(os.path.split(file_path)[0], "bootimg_ext")
     file2dir(file_path, bimg_path)
     file2dir(bin_call("bootimg.exe"), bimg_path)
@@ -262,7 +262,7 @@ def parameter_split(line):
     return pars
 
 def bin_call(program_name):
-    return os.path.join(os.path.abspath("."), "bin", program_name)
+    return os.path.join(os.getcwd(), "bin", program_name)
 
 def mkdir(path):
     # 创建目录

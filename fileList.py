@@ -135,7 +135,7 @@ class FL:
                     raise Exception("Could not find (plat_)file_contexts(.bin)!"
                                     " So we can not get selabel of files!")
             else:
-                if os.system("ls -Z") == 0:
+                if os.system("ls -Z > /dev/null") == 0:
                     for f in (self.filelist + self.dirlist):
                         f.selabel = cn.get_selabel_linux(f.path)
                 else:
