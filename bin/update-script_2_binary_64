@@ -130,6 +130,7 @@ apply_patch() {
 # apply_patch_check <file> [<sha1_hex> [<sha1_hex2> ...]]
 apply_patch_check() {
   LD_LIBRARY_PATH=/system/lib64 applypatch -c "$@" || LD_LIBRARY_PATH=/system/lib64 /tmp/bin/applypatch_old_64 -c "$@";
+  [ $? == 0 ] || abort "$1" " has unexpected contents.";
 }
 
 # apply_patch_space <bytes>

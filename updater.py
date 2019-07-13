@@ -102,9 +102,7 @@ class Updater:
         self.script.append(s + ";\n")
 
     def apply_patch_check(self, spath, *f_shas):
-        self.script.append("apply_patch_check %s %s || "
-                           "abort \"%s has unexpected contents.\";\n"
-                           % (spath, " ".join(f_shas), spath))
+        self.script.append("apply_patch_check %s %s;" % (spath, " ".join(f_shas)))
 
     def apply_patch(self, spath, f_sha1, tgtsize, p_sha1, p_path):
         # applypatch <目标文件路径> <-> <打补丁后的文件哈希> \
