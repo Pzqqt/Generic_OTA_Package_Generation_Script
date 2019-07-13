@@ -30,12 +30,12 @@ class Updater:
         self.blank_line()
 
     def check_device(self, model, ext_models):
-        s = "[ $(getprop ro.product.device) == \"%s\" ] || " % model
-        s += "[ $(getprop ro.build.product) == \"%s\" ] || " % model
+        s = "[ \"$(getprop ro.product.device)\" == \"%s\" ] || " % model
+        s += "[ \"$(getprop ro.build.product)\" == \"%s\" ] || " % model
         for ext_m in ext_models:
             if ext_m != model:
-                s += "[ $(getprop ro.product.device) == \"%s\" ] || " % ext_m
-                s += "[ $(getprop ro.build.product) == \"%s\" ] || " % ext_m
+                s += "[ \"$(getprop ro.product.device)\" == \"%s\" ] || " % ext_m
+                s += "[ \"$(getprop ro.build.product)\" == \"%s\" ] || " % ext_m
         s += ("abort \"This package is for device:%s; "
               % ",".join([str(m) for m in (model, *ext_models)]))
         s += "this device is $(getprop ro.product.device).\";\n"
@@ -102,7 +102,7 @@ class Updater:
         self.script.append(s + ";\n")
 
     def apply_patch_check(self, spath, *f_shas):
-        self.script.append("apply_patch_check %s %s;" % (spath, " ".join(f_shas)))
+        self.script.append("apply_patch_check %s %s;\n" % (spath, " ".join(f_shas)))
 
     def apply_patch(self, spath, f_sha1, tgtsize, p_sha1, p_path):
         # applypatch <目标文件路径> <-> <打补丁后的文件哈希> \
