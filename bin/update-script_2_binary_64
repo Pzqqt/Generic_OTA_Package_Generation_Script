@@ -149,3 +149,23 @@ assert() {
     shift;
   done;
 }
+
+install_bb() {
+  local ota_tmp=/tmp/ota_package
+  local bb_bin=${ota_tmp}/bin/busybox
+  local bb_dir=/tmp/bb
+  rm -rf $ota_tmp
+  mkdir -p $ota_tmp
+  unzip "$ZIPFILE" -d $ota_tmp
+  [ -f $bb_bin ] || abort "Error: Failed to unzip package!"
+  rm -rf $bb_dir
+  mkdir $bb_dir
+  cp -f $bb_bin ${bb_dir}/busybox
+  chmod +x ${bb_dir}/busybox
+  ${bb_dir}/busybox --install -s $bb_dir
+  export PATH_BAK=$PATH
+  echo $PATH | grep -q "^$bb_dir" || export PATH=${bb_dir}:${PATH}
+  rm -rf $ota_tmp
+}
+
+install_bb

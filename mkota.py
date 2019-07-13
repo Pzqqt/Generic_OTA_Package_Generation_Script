@@ -190,8 +190,11 @@ class main():
                 sys.stderr.write("Copying file %-99s\r" % f.spath)
                 cn.file2file(f.path, os.path.join(self.ota_path, "vendor", f.rela_path))
         cn.clean_line()
-        cn.file2dir(cn.bin_call("applypatch_old"), os.path.join(self.ota_path, "bin"))
-        cn.file2dir(cn.bin_call("applypatch_old_64"), os.path.join(self.ota_path, "bin"))
+        if self.is_64bit:
+            cn.file2dir(cn.bin_call("applypatch_old_64"), os.path.join(self.ota_path, "bin"))
+        else:
+            cn.file2dir(cn.bin_call("applypatch_old"), os.path.join(self.ota_path, "bin"))
+        cn.file2dir(cn.bin_call("busybox"), os.path.join(self.ota_path, "bin"))
 
     def updater_init(self):
         print("\nGenerating script...")
