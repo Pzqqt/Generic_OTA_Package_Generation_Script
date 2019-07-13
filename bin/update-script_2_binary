@@ -129,7 +129,7 @@ apply_patch() {
 
 # apply_patch_check <file> [<sha1_hex> [<sha1_hex2> ...]]
 apply_patch_check() {
-  LD_LIBRARY_PATH=/system/lib applypatch -c "$@";
+  LD_LIBRARY_PATH=/system/lib applypatch -c "$@" || LD_LIBRARY_PATH=/system/lib /tmp/bin/applypatch_old -c "$@";
 }
 
 # apply_patch_space <bytes>
