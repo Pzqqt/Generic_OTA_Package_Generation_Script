@@ -7,13 +7,9 @@ from common import bin_call
 
 class Updater:
 
-    def __init__(self, is_64bit):
+    def __init__(self):
         self.script = []
-        if is_64bit:
-            basefile = bin_call("update-script_2_binary_64")
-        else:
-            basefile = bin_call("update-script_2_binary")
-        with open(basefile, "r", encoding="UTF-8") as f:
+        with open(bin_call("update-script_2_binary"), "r", encoding="UTF-8") as f:
             for line in f.readlines():
                 self.script.append(line)
         self.blank_line()
@@ -101,12 +97,10 @@ class Updater:
             s += " selabel %s" % selabel
         self.script.append(s + ";\n")
 
-    def apply_patch_check(self, spath, *f_shas):
-        self.script.append("apply_patch_check %s %s;\n" % (spath, " ".join(f_shas)))
+    def apply_patch_check_sp(self, spath, *f_shas):
+        self.script.append("apply_patch_check_sp %s %s;\n" % (spath, " ".join(f_shas)))
 
-    def apply_patch(self, spath, f_sha1, tgtsize, p_sha1, p_path):
-        # applypatch <目标文件路径> <-> <打补丁后的文件哈希> \
-        #            <打补丁后的文件大小> <原文件哈希:补丁文件路径>
-        # 其中 - 参数暗示覆盖原文件
-        self.script.append("apply_patch %s - %s %s %s:%s;\n"
-                           % (spath, f_sha1, tgtsize, p_sha1, p_path))
+    def apply_patch_sp(self, spath, dst_sha1, src_sha1, patch_path):
+        # apply_patch_sp <目标文件路径> <打补丁后的文件哈希> <原文件哈希> <补丁文件路径>
+        self.script.append("apply_patch_sp %s %s %s %s;\n"
+                           % (spath, dst_sha1, src_sha1, patch_path))

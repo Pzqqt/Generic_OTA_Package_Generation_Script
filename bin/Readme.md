@@ -6,7 +6,7 @@
 - **brotli**: https://github.com/google/brotli<br>
 - **Imgextractor.exe**: 到处都有(everywhere)<br>
 - **sdat2img.py**: https://github.com/xpirt/sdat2img<br>
-- **update-script_2_binary***: https://forum.xda-developers.com/android/software-hacking/dev-complete-shell-script-flashable-zip-t2934449<br>
+- **update-script_2_binary**: https://forum.xda-developers.com/android/software-hacking/dev-complete-shell-script-flashable-zip-t2934449<br>
 - **bootimg.exe**: http://blog.cofface.com/archives/741.html<br>
-- **applypatch_old***: https://github.com/MoKee/android_bootable_recovery/tree/mkn/applypatch<br>
 - **busybox**: https://github.com/topjohnwu/ndk-busybox<br>
+- **bspatch**: http://www.daemonology.net/bsdiff/<br>

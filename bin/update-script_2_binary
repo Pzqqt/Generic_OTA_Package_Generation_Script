@@ -114,28 +114,27 @@ file_getprop() { grep "^$2=" "$1" | head -n1 | cut -d= -f2; }
 # getprop <property>
 getprop() { test -e /sbin/getprop && /sbin/getprop $1 || grep "^$1=" /default.prop | head -n1 | cut -d= -f2; }
 
-# sha1_check <file> [<sha1_hex> [<sha1_hex2> ...]]
-sha1_check() {
-  sum=$(sha1sum $1 | cut -d  -f1);
-  if [ ! "$2" -o $(is_substring $sum "$*") == 1 ]; then
-    echo $sum;
-  fi;
+sha1() {
+    sha1sum $1 | awk '{print $1}';
 }
 
-# apply_patch <src_file> <tgt_file> <tgt_sha1> <tgt_size> [<src_sha1_1>:<patch1> [<src_sha1_2>:<patch2> ...]]
-apply_patch() {
-  LD_LIBRARY_PATH=/system/lib applypatch "$@" || LD_LIBRARY_PATH=/system/lib /tmp/bin/applypatch_old "$@";
+# apply_patch_check_sp <file> [<sha1_hex> [<sha1_hex2> ...]]
+apply_patch_check_sp() {
+    local file_path="$1"
+    local file_sha1=$(sha1 "${file_path}")
+    shift
+    while [ $# != 0 ]; do
+        [ "$file_sha1" == "$1" ] && return 0;
+        shift
+    done
+    abort "$file_path" " has unexpected contents.";
 }
 
-# apply_patch_check <file> [<sha1_hex> [<sha1_hex2> ...]]
-apply_patch_check() {
-  LD_LIBRARY_PATH=/system/lib applypatch -c "$@" || LD_LIBRARY_PATH=/system/lib /tmp/bin/applypatch_old -c "$@";
-  [ $? == 0 ] || abort "$1" " has unexpected contents.";
-}
-
-# apply_patch_space <bytes>
-apply_patch_space() {
- LIBRARY_PATH=/system/lib applypatch -s $1;
+# apply_patch_sp <src_path> <dst_sha1> <src_sha1> <patch>
+apply_patch_sp() {
+    local file_sha1=$(sha1 "${1}")
+    [ "$file_sha1" == "$2" ] && return 0;
+    [ "$file_sha1" == "$3" ] && /tmp/bin/bspatch "$1" "$1" "$4";
 }
 
 # abort [<message>]
@@ -161,7 +160,7 @@ install_bb() {
   rm -rf $bb_dir
   mkdir $bb_dir
   cp -f $bb_bin ${bb_dir}/busybox
-  chmod +x ${bb_dir}/busybox
+  chmod 755 ${bb_dir}/busybox
   ${bb_dir}/busybox --install -s $bb_dir
   export PATH_BAK=$PATH
   echo $PATH | grep -q "^$bb_dir" || export PATH=${bb_dir}:${PATH}

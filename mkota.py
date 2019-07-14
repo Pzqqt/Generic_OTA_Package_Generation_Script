@@ -190,15 +190,12 @@ class main():
                 sys.stderr.write("Copying file %-99s\r" % f.spath)
                 cn.file2file(f.path, os.path.join(self.ota_path, "vendor", f.rela_path))
         cn.clean_line()
-        if self.is_64bit:
-            cn.file2dir(cn.bin_call("applypatch_old_64"), os.path.join(self.ota_path, "bin"))
-        else:
-            cn.file2dir(cn.bin_call("applypatch_old"), os.path.join(self.ota_path, "bin"))
         cn.file2dir(cn.bin_call("busybox"), os.path.join(self.ota_path, "bin"))
+        cn.file2dir(cn.bin_call("bspatch"), os.path.join(self.ota_path, "bin"))
 
     def updater_init(self):
         print("\nGenerating script...")
-        self.us = Updater(self.is_64bit)
+        self.us = Updater()
         if self.model != "Unknown":
             self.us.check_device(self.model, self.ext_models)
             self.us.blank_line()
@@ -229,20 +226,18 @@ class main():
 
     def diff_files_patch_init(self):
         # patch check命令参数列表
-        self.patch_check_script_list = []
+        self.patch_check_script_list_sp = []
         # patch 命令参数列表
-        self.patch_do_script_list = []
+        self.patch_do_script_list_sp = []
         # 哈希相同但信息不同的文件
         self.cps.diff_info_files = []
         # 符号链接指向不同的文件
         self.cps.diff_slink_files = []
         # 卡刷时直接替换(而不是打补丁)的文件(名)
-        self.cps.ignore_names = {"build.prop",
-                                 "recovery-from-boot.p",
-                                 "install-recovery.sh",
-                                 "applypatch",
-                                 "backuptool.functions",
-                                 "backuptool.sh",}
+        self.cps.ignore_names = {
+            "build.prop", "recovery-from-boot.p", "install-recovery.sh", 
+            "backuptool.functions", "backuptool.sh"
+        }
         if self.pt_flag:
             self.cpv.diff_info_files = []
             self.cpv.diff_slink_files = []
@@ -275,8 +270,8 @@ class main():
                 p_path = os.path.join(self.ota_path, "patch", "system", f2.rela_path + ".p")
                 p_spath = p_path.replace(self.ota_path, "/tmp", 1).replace("\\", "/")
                 cn.file2file(temp_p_file, p_path, move=True)
-                self.patch_check_script_list.append((f2.spath, f1.sha1, f2.sha1))
-                self.patch_do_script_list.append((f2.spath, f2.sha1, len(f2), f1.sha1, p_spath))
+                self.patch_check_script_list_sp.append((f2.spath, f1.sha1, f2.sha1))
+                self.patch_do_script_list_sp.append((f2.spath, f2.sha1, f1.sha1, p_spath))
             cn.clean_line()
 
     def diff_files_patch_vendor(self):
@@ -304,8 +299,8 @@ class main():
                 p_path = os.path.join(self.ota_path, "patch", "vendor", f2.rela_path + ".p")
                 p_spath = p_path.replace(self.ota_path, "/tmp", 1).replace("\\", "/")
                 cn.file2file(temp_p_file, p_path, move=True)
-                self.patch_check_script_list.append((f2.spath, f1.sha1, f2.sha1))
-                self.patch_do_script_list.append((f2.spath, f2.sha1, len(f2), f1.sha1, p_spath))
+                self.patch_check_script_list_sp.append((f2.spath, f1.sha1, f2.sha1))
+                self.patch_do_script_list_sp.append((f2.spath, f2.sha1, f1.sha1, p_spath))
             cn.clean_line()
 
     def diff_files_patch_write(self):
@@ -313,18 +308,17 @@ class main():
         self.us.ui_print("Unpack Patch Files ...")
         self.us.package_extract_dir("patch", "/tmp/patch")
         self.us.package_extract_dir("bin", "/tmp/bin")
-        self.us.add("chmod 0755 /tmp/bin/applypatch_old")
-        self.us.add("chmod 0755 /tmp/bin/applypatch_old_64")
+        self.us.add("chmod 0755 /tmp/bin/bspatch")
         self.us.blank_line()
         self.us.ui_print("Check Files ...")
-        for arg in self.patch_check_script_list:
+        for arg in self.patch_check_script_list_sp:
             # 差异文件patch check
-            self.us.apply_patch_check(*arg)
+            self.us.apply_patch_check_sp(*arg)
         self.us.blank_line()
         self.us.ui_print("Patch Files ...")
-        for arg in self.patch_do_script_list:
+        for arg in self.patch_do_script_list_sp:
             # 差异文件patch
-            self.us.apply_patch(*arg)
+            self.us.apply_patch_sp(*arg)
         self.us.blank_line()
         self.us.delete_recursive("/tmp/patch")
         self.us.delete_recursive("/tmp/bin")
