@@ -113,7 +113,7 @@ class FL_Compare:
                 self.diff_files.append((FL_1_files_cp[i], FL_2_files_cp[i]))
 
 def compare_build_prop(dic_1, dic_2):
-    if not all((type(dic_1) is dict, type(dic_2) is dict)):
+    if not (isinstance(dic_1, dict) and isinstance(dic_2, dict)):
         raise ValueError("The parameters must be Dict!")
     all_kv = set(dic_1.keys()) & set(dic_2.keys())
     # 优先使用"ro.build.version.incremental"属性值来验证Rom 因为重复的可能性很小
@@ -127,14 +127,12 @@ def compare_build_prop(dic_1, dic_2):
         raise Exception("Seems that these two Roms are the same.")
     print("We could not find a suitable attribute.")
     print("You need to choose one manually.\n")
-    i = 1
-    for kv in sel_kv:
-        print("Option %s:" % i)
+    for num, kv in enumerate(sel_kv):
+        print("Option %s:" % num+1)
         print("  Key      : %s\n"
               "  Old Value: %s\n"
               "  New Value: %s\n"
               % kv)
-        i += 1
     while True:
         try:
             sel = int(input("Please enter the number: "))
@@ -142,5 +140,5 @@ def compare_build_prop(dic_1, dic_2):
             print("\nError number! Try again please.\n")
         else:
             if sel in range(1, len(sel_kv) + 1):
-                return (sel_kv[sel - 1])
+                return sel_kv[sel-1]
             print("\nError number! Try again please.\n")

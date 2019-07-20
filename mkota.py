@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+import sys
+import os
+import tempfile
+import re
+from argparse import ArgumentParser
+
 from compare import FL_Compare, compare_build_prop
 from fileList import FL
 import common as cn
 from updater import Updater
 
-import sys
-import os
-import hashlib
-import tempfile
-import re
-from argparse import ArgumentParser
-
 __version__ = "v1.1"
 
-class main():
+class MkOta():
 
     def __init__(self, old_package, new_package, ota_package_name, ext_models=None):
         self.old_package = old_package
@@ -30,7 +29,10 @@ class main():
     def run(self):
         self.clean_temp()
 
-        self.unpack_zip()
+        print("\nUnpacking OLD Rom...")
+        self.p1_path = cn.extract_zip(self.old_package)
+        print("\nUnpacking NEW Rom...")
+        self.p2_path = cn.extract_zip(self.new_package)
         self.p1_simg = self.unpack_dat(self.p1_path, is_new=False)
         self.p2_simg = self.unpack_dat(self.p2_path, is_new=True)
         self.pt_flag = self.is_pt()
@@ -52,37 +54,37 @@ class main():
             self.p1_vfl = self.gen_file_list(self.p1_vpath, is_new=False, is_vendor=True)
             self.p2_vfl = self.gen_file_list(self.p2_vpath, is_new=True, is_vendor=True)
 
-        self.do_compare()
-        self.get_rom_info()
-        self.get_bootimg_block()
+        print("\nStart comparison system files...")
+        self.cps = FL_Compare(self.p1_sfl, self.p2_sfl)
+        print("\nComparative completion!")
+        if self.pt_flag:
+            print("\nStart comparison vendor files...")
+            self.cpv = FL_Compare(self.p1_vfl, self.p2_vfl)
+            print("\nComparative completion!")
+        self.model, self.verify_info = self.get_rom_info()
+        self.bootimg_block = self.get_bootimg_block()
+        self.us = Updater()
         self.updater_init()
-        self.cp_files_1st()
+        self.cp_files()
+        # patch check命令参数列表
+        self.patch_check_script_list_sp = []
+        # patch 命令参数列表
+        self.patch_do_script_list_sp = []
         self.diff_files_patch_init()
         self.diff_files_patch_system()
         if self.pt_flag:
             self.diff_files_patch_vendor()
         self.diff_files_patch_write()
 
-        self.remove_init()
-        self.remove_dirs()
-        self.remove_files()
-        self.remove_slink_dirs()
-        self.remove_slink_files()
+        self.remove_items()
 
         self.package_extract()
         self.create_symlinks()
         self.set_metadata()
 
         self.updater_end()
-        self.updater_write()
 
         self.final()
-
-    def unpack_zip(self):
-        print("\nUnpacking OLD Rom...")
-        self.p1_path = cn.extract_zip(self.old_package)
-        print("\nUnpacking NEW Rom...")
-        self.p2_path = cn.extract_zip(self.new_package)
 
     def is_pt(self):
         return all((
@@ -126,58 +128,51 @@ class main():
     def gen_file_list(self, file_path, is_new, is_vendor=False):
         oon, sov = self.pars_init(is_new, is_vendor)
         print("\nRetrieving %s Rom's %s file list..." % (oon, sov))
-        px = FL(file_path, is_vendor)
+        file_list = FL(file_path, is_vendor)
         cn.clean_line()
         print("Search completed\nFound %s files, %s directories"
-              % (len(px), len(px.dirlist)))
-        return px
-
-    def do_compare(self):
-        print("\nStart comparison system files...")
-        self.cps = FL_Compare(self.p1_sfl, self.p2_sfl)
-        print("\nComparative completion!")
-        if self.pt_flag:
-            print("\nStart comparison vendor files...")
-            self.cpv = FL_Compare(self.p1_vfl, self.p2_vfl)
-            print("\nComparative completion!")
+              % (len(file_list), len(file_list.dirlist)))
+        return file_list
 
     def get_rom_info(self):
         print("\nGetting rom information...")
-        self.p1_prop = cn.get_build_prop(os.path.join(self.p1_sfl.fullpath, "build.prop"))
-        self.p2_prop = cn.get_build_prop(os.path.join(self.p2_sfl.fullpath, "build.prop"))
-        self.model = self.p2_prop.get("ro.product.device", "Unknown")
-        self.arch = "arm"
-        self.is_64bit = False
-        if self.p2_prop.get("ro.product.cpu.abi") == "x86":
-            self.arch = "x86"
-        if self.p2_prop.get("ro.product.cpu.abi2") == "x86":
-            self.arch = "x86"
-        if int(self.p2_prop.get("ro.build.version.sdk", "0")) >= 21:
-            if self.p2_prop.get("ro.product.cpu.abi") == "arm64-v8a":
-                self.arch = "arm64"
-                self.is_64bit = True
-            if self.p2_prop.get("ro.product.cpu.abi") == "x86_64":
-                self.arch = "x64"
-                self.is_64bit = True
-        self.verify_info = compare_build_prop(self.p1_prop, self.p2_prop)
-        print("\nModel: %s" % self.model)
-        print("\nArch: %s" % self.arch)
-        print("\nRom verify info: %s=%s" % self.verify_info[:-1])
+        p1_prop = cn.get_build_prop(os.path.join(self.p1_sfl.fullpath, "build.prop"))
+        p2_prop = cn.get_build_prop(os.path.join(self.p2_sfl.fullpath, "build.prop"))
+        model = p2_prop.get("ro.product.device", "Unknown")
+        arch = "arm"
+        if p2_prop.get("ro.product.cpu.abi") == "x86":
+            arch = "x86"
+        if p2_prop.get("ro.product.cpu.abi2") == "x86":
+            arch = "x86"
+        if int(p2_prop.get("ro.build.version.sdk", "0")) >= 21:
+            if p2_prop.get("ro.product.cpu.abi") == "arm64-v8a":
+                arch = "arm64"
+            if p2_prop.get("ro.product.cpu.abi") == "x86_64":
+                arch = "x64"
+        if arch not in ("arm", "arm64"):
+            raise Exception("This tool is only available for arm/arm64 devices. "
+                            "This rom's device architecture is: %s" % arch)
+        verify_info = compare_build_prop(p1_prop, p2_prop)
+        print("\nModel: %s" % model)
+        print("\nArch: %s" % arch)
+        print("\nRom verify info: %s=%s" % verify_info[:-1])
+        return model, verify_info
 
     def get_bootimg_block(self):
         old_script = os.path.join(self.p2_path, "META-INF", "com",
                                   "google", "android", "updater-script")
         cn.is_exist_path(old_script)
-        self.bootimg_block = ""
+        bootimg_block = ""
         with open(old_script, "r", encoding="UTF-8", errors="ignore") as f:
             for line in f.readlines():
                 if line.strip().startswith("package_extract_file"):
                     if "\"boot.img\"" in line:
-                        self.bootimg_block = cn.parameter_split(line.strip())[-1]
-        if not self.bootimg_block:
+                        bootimg_block = cn.parameter_split(line.strip())[-1]
+        if not bootimg_block:
             raise Exception("Can not get boot.img block!")
+        return bootimg_block
 
-    def cp_files_1st(self):
+    def cp_files(self):
         print("\nCopying files...")
         new_bootimg = os.path.join(self.p2_path, "boot.img")
         cn.is_exist_path(new_bootimg)
@@ -195,7 +190,6 @@ class main():
 
     def updater_init(self):
         print("\nGenerating script...")
-        self.us = Updater()
         if self.model != "Unknown":
             self.us.check_device(self.model, self.ext_models)
             self.us.blank_line()
@@ -225,17 +219,14 @@ class main():
         self.us.add("}")
 
     def diff_files_patch_init(self):
-        # patch check命令参数列表
-        self.patch_check_script_list_sp = []
-        # patch 命令参数列表
-        self.patch_do_script_list_sp = []
+        # SP
         # 哈希相同但信息不同的文件
         self.cps.diff_info_files = []
         # 符号链接指向不同的文件
         self.cps.diff_slink_files = []
         # 卡刷时直接替换(而不是打补丁)的文件(名)
         self.cps.ignore_names = {
-            "build.prop", "recovery-from-boot.p", "install-recovery.sh", 
+            "build.prop", "recovery-from-boot.p", "install-recovery.sh",
             "backuptool.functions", "backuptool.sh"
         }
         if self.pt_flag:
@@ -245,7 +236,7 @@ class main():
         cn.mkdir(os.path.join(self.ota_path, "patch"))
 
     def diff_files_patch_system(self):
-        if len(self.cps.diff_files):
+        if self.cps.diff_files:
             for f1, f2 in self.cps.diff_files:
                 if f1.slink != f2.slink:
                     self.cps.diff_slink_files.append(f2)
@@ -270,12 +261,13 @@ class main():
                 p_path = os.path.join(self.ota_path, "patch", "system", f2.rela_path + ".p")
                 p_spath = p_path.replace(self.ota_path, "/tmp", 1).replace("\\", "/")
                 cn.file2file(temp_p_file, p_path, move=True)
+                # SP
                 self.patch_check_script_list_sp.append((f2.spath, f1.sha1, f2.sha1))
                 self.patch_do_script_list_sp.append((f2.spath, f2.sha1, f1.sha1, p_spath))
             cn.clean_line()
 
     def diff_files_patch_vendor(self):
-        if len(self.cpv.diff_files):
+        if self.cpv.diff_files:
             for f1, f2 in self.cpv.diff_files:
                 if f1.slink != f2.slink:
                     self.cpv.diff_slink_files.append(f2)
@@ -299,6 +291,7 @@ class main():
                 p_path = os.path.join(self.ota_path, "patch", "vendor", f2.rela_path + ".p")
                 p_spath = p_path.replace(self.ota_path, "/tmp", 1).replace("\\", "/")
                 cn.file2file(temp_p_file, p_path, move=True)
+                # SP
                 self.patch_check_script_list_sp.append((f2.spath, f1.sha1, f2.sha1))
                 self.patch_do_script_list_sp.append((f2.spath, f2.sha1, f1.sha1, p_spath))
             cn.clean_line()
@@ -323,41 +316,33 @@ class main():
         self.us.delete_recursive("/tmp/patch")
         self.us.delete_recursive("/tmp/bin")
 
-    def remove_init(self):
+    def remove_items(self):
         self.us.blank_line()
         self.us.ui_print("Remove Unneeded Files ...")
-
-    def remove_dirs(self):
+        # 删除目录
         for d in self.cps.FL_1_isolated_dirs_spaths:
-            # 删除目录
             self.us.delete_recursive(d)
         if self.pt_flag:
             for d in self.cpv.FL_1_isolated_dirs_spaths:
                 self.us.delete_recursive(d)
-
-    def remove_files(self):
+        # 删除文件
         for f in self.cps.FL_1_isolated_files_spaths:
-            # 删除文件
             if f not in self.cps.ignore_del_files_spaths:
                 self.us.delete(f)
         if self.pt_flag:
             for f in self.cpv.FL_1_isolated_files_spaths:
                 if f not in self.cpv.ignore_del_files_spaths:
                     self.us.delete(f)
-
-    def remove_slink_dirs(self):
+        # 差异符号链接目录删除
         for d in self.cps.diff_dirs:
-            # 差异符号链接目录删除
             if d.slink:
                 self.us.delete(d.spath)
         if self.pt_flag:
             for d in self.cpv.diff_dirs:
                 if d.slink:
                     self.us.delete(d.spath)
-
-    def remove_slink_files(self):
+        # 差异符号链接文件删除
         for f in self.cps.diff_slink_files:
-            # 差异符号链接文件删除
             self.us.delete(f.spath)
         if self.pt_flag:
             for f in self.cpv.diff_slink_files:
@@ -366,10 +351,10 @@ class main():
     def package_extract(self):
         self.us.blank_line()
         self.us.ui_print("Unpack New Files ...")
-        if len(self.cps.FL_2_isolated_dirs + self.cps.FL_2_isolated_files):
+        if self.cps.FL_2_isolated_dirs or self.cps.FL_2_isolated_files:
             self.us.package_extract_dir("system", "/system")
         if self.pt_flag:
-            if len(self.cpv.FL_2_isolated_dirs + self.cpv.FL_2_isolated_files):
+            if self.cpv.FL_2_isolated_dirs or self.cpv.FL_2_isolated_files:
                 self.us.package_extract_dir("vendor", "/vendor")
 
     def create_symlinks(self):
@@ -426,8 +411,6 @@ class main():
         self.us.delete_recursive("/data/dalvik-cache")
         self.us.blank_line()
         self.us.ui_print("Done!")
-
-    def updater_write(self):
         update_script_path = os.path.join(self.ota_path, "META-INF", "com",
                                           "google", "android")
         cn.mkdir(update_script_path)
@@ -486,5 +469,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(args.old_package, args.new_package, args.output, args.ext_models)
+    MkOta(args.old_package, args.new_package, args.output, args.ext_models)
     sys.exit()

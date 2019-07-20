@@ -28,6 +28,7 @@ class FL_Base:
             self.spath = "/vendor/" + self.rela_path.replace("\\", "/")
         else:
             self.spath = "/system/" + self.rela_path.replace("\\", "/")
+        self.selabel = ""
         if not cn.is_win():
             self.set_info(self.get_stat(self.path))
 
@@ -38,12 +39,12 @@ class FL_Base:
     def get_stat(path):
         # 获取文件uid gid 权限 symlink信息 返回一个四元元组
         # 仅用于Linux环境
-        fs = os.stat(path, follow_symlinks=False)
+        file_stat = os.stat(path, follow_symlinks=False)
         if os.path.islink(path):
             slink = os.readlink(path)
         else:
             slink = ""
-        return (fs.st_uid, fs.st_gid, oct(fs.st_mode)[-3:], slink)
+        return (file_stat.st_uid, file_stat.st_gid, oct(file_stat.st_mode)[-3:], slink)
 
 class FL_File(FL_Base):
 
@@ -136,7 +137,7 @@ class FL:
                                     " So we can not get selabel of files!")
             else:
                 if os.system("ls -Z > /dev/null") == 0:
-                    for f in (self.filelist + self.dirlist):
+                    for f in self.filelist + self.dirlist:
                         f.selabel = cn.get_selabel_linux(f.path)
                 else:
                     raise Exception("Can not get selabel with "
@@ -158,9 +159,9 @@ class FL:
                 fc_path = fc_path_tmp + ".bin"
                 break
         if not fc_path:
-            return
+            return False
         sel_dic = cn.get_file_contexts(fc_path)
-        for f in (self.filelist + self.dirlist):
+        for f in self.filelist + self.dirlist:
             sel = cn.get_selabel(sel_dic, f.spath)
             if sel:
                 f.selabel = sel

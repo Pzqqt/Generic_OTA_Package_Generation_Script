@@ -7,10 +7,11 @@ import zipfile
 import shutil
 import re
 import tempfile
-import bsdiff4
 from collections import OrderedDict
 from multiprocessing import Process, Queue
 from time import sleep
+
+import bsdiff4
 
 from bin.sdat2img import main as _sdat2img
 
@@ -42,7 +43,7 @@ def is_exist_path(path, file_format="", file_type="", file_name=""):
     if file_format and file_type:
         if file_format == "zip" and zipfile.is_zipfile(path):
             return
-        elif path.endswith("." + file_format):
+        if path.endswith("." + file_format):
             return
         raise WrongFileTypeError("%s: Not a(n) %s file!" % (path, file_type))
     # 判断文件名
@@ -57,26 +58,26 @@ def make_zip(path):
     if not os.path.isdir(path):
         raise PathNotFoundError("%s: No such directory!" % path)
     zip_path = tempfile.mktemp(".zip", "GOTAPGS_")
-    with zipfile.ZipFile(zip_path, "w") as zip:
+    with zipfile.ZipFile(zip_path, "w") as zip_file:
         for root, dirs, files in os.walk(path, topdown=True):
             for f in files:
                 f_fullpath = os.path.join(root, f)
                 # diff文件不再压缩(因为已经被gz压缩过了)
                 if f.endswith(".p"):
-                    zip.write(f_fullpath,
-                              arcname=f_fullpath.replace(path, "", 1))
+                    zip_file.write(f_fullpath,
+                                   arcname=f_fullpath.replace(path, "", 1))
                 else:
-                    zip.write(f_fullpath,
-                              arcname=f_fullpath.replace(path, "", 1),
-                              compress_type=zipfile.ZIP_DEFLATED)
+                    zip_file.write(f_fullpath,
+                                   arcname=f_fullpath.replace(path, "", 1),
+                                   compress_type=zipfile.ZIP_DEFLATED)
     return zip_path
 
 def extract_zip(file_path):
     # 解压zip文件 保存在临时文件夹 并返回文件夹路径
     is_exist_path(file_path, "zip", "ZIP")
     extract_path = tempfile.mkdtemp("_ROM", "GOTAPGS_")
-    with zipfile.ZipFile(file_path, "r") as zip:
-        zip.extractall(extract_path)
+    with zipfile.ZipFile(file_path, "r") as zip_file:
+        zip_file.extractall(extract_path)
     return extract_path
 
 def extract_br(file_path):
@@ -146,7 +147,7 @@ def get_bsdiff(old_file, new_file, patch_file):
     q = Queue()
     p = Process(target=_get_bsdiff, args=(q, old_file, new_file, patch_file))
     p.start()
-    for t in range(TIMEOUT * 20):
+    for _ in range(TIMEOUT * 20):
         if q.qsize():
             return True
         sleep(0.05)
@@ -241,10 +242,7 @@ def get_selabel_linux(path):
     else:
         with os.popen("ls -Z %s" % path) as infos:
             info = infos.read().strip().split()
-    if len(info) > 2:
-        return info[3]
-    else:
-        return info[0]
+    return info[3] if len(info) > 2 else info[0]
 
 def parameter_split(line):
     # 对edify脚本的参数进行拆分

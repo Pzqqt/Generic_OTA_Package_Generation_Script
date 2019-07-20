@@ -87,10 +87,10 @@ class Updater:
             s += " selabel %s" % selabel
         self.script.append(s + ";\n")
 
-    def set_metadata_recursive(self, dir, uid, gid, dmode, fmode,
+    def set_metadata_recursive(self, dir_, uid, gid, dmode, fmode,
                                capabilities=None, selabel=None):
         s = ("set_metadata_recursive %s uid %s gid %s dmode %s fmode %s"
-             % (dir, uid, gid, dmode, fmode))
+             % (dir_, uid, gid, dmode, fmode))
         if capabilities:
             s += " capabilities %s" % capabilities
         if selabel:
