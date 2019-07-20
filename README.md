@@ -26,18 +26,28 @@ pip3 install bsdiff4
 ```sh
 Generic OTA Package Generation Script vX.X
 By Pzqqt
-Usage: mkota.py <old_package_path> <new_package_path> [ota_package_name] [--ext-models [model_1] [model_2] ...]
+usage: mkota.py [-h] [-o OUTPUT] [-e EXT_MODELS] old_package new_package
 
-    <old_package_path>                     : old package file path
-    <new_package_path>                     : new package file path
-    [ota_package_name]                     : custom generated OTA package name (default OTA.zip)
-    [--ext-models [model_1] [model_2] ...] : additional model that allows for model verification
+positional arguments:
+  old_package           old package path
+  new_package           new package path
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        output OTA package name/path (default
+                        OTA.zip)(default: ./OTA.zip)
+  -e EXT_MODELS, --ext-models EXT_MODELS
+                        additional model that allows for model
+                        verification(default: None)
 ```
 
 ## Note
 
 - 目前仅支持对Lollipop+的Rom包进行操作，不支持使用传统方法和特殊方法打包的Rom<br>
 (Only Lollipop+ Rom supported. Not supported Rom of packaged with traditional methods or special methods.)
+- 目前不支持对system-as-root设备的Rom包进行操作，因为我没有设备进行测试(笑)<br>
+(Not supported to operate the Rom of any system-as-root device because I have no device to test.)
 - 为什么使用bsdiff而不使用imgdiff?因为imgdiff在Windows系统下无法使用，其次bsdiff已经足够，imgdiff虽然更好但并非必须<br>
 (Why use bsdiff instead of imgdiff? Because imgdiff is not available on Windows OS, secondly bsdiff is enough, imgdiff is better but not necessary.)
 
