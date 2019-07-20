@@ -234,7 +234,7 @@ def get_selabel_linux(path):
     # 仅用于Linux环境
     if os.path.isdir(path):
         path, name = os.path.split(path)
-        with os.popen("ls -Z %s" % path) as infos:
+        with os.popen("ls -a -Z %s" % path) as infos:
             for s in infos.readlines():
                 info = s.strip().split()
                 if name in info:
