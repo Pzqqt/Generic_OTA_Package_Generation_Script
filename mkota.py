@@ -12,7 +12,7 @@ from fileList import FL
 import common as cn
 from updater import Updater
 
-__version__ = "v1.1"
+__version__ = "v1.2"
 
 class MkOta():
 
