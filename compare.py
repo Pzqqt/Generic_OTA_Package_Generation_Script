@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from fileList import FL
+from filelist import FL
 
 class FL_Compare:
 

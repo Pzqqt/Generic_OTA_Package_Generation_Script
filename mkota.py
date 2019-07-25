@@ -8,7 +8,7 @@ import re
 from argparse import ArgumentParser
 
 from compare import FL_Compare, compare_build_prop
-from fileList import FL
+from filelist import FL
 import common as cn
 from updater import Updater
 
