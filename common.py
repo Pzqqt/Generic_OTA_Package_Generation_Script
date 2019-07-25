@@ -232,16 +232,8 @@ def get_selabel(dic, path):
 def get_selabel_linux(path):
     # 获取path的SE上下文属性
     # 仅用于Linux环境
-    if os.path.isdir(path):
-        path, name = os.path.split(path)
-        with os.popen("ls -Z %s" % path) as infos:
-            for s in infos.readlines():
-                info = s.strip().split()
-                if name in info:
-                    break
-    else:
-        with os.popen("ls -Z %s" % path) as infos:
-            info = infos.read().strip().split()
+    with os.popen("ls -dZ %s" % path) as infos:
+        info = infos.read().strip().split()
     return info[3] if len(info) > 2 else info[0]
 
 def parameter_split(line):
