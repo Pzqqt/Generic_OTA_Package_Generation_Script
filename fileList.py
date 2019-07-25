@@ -48,6 +48,12 @@ class FL_Base:
 
 class FL_File(FL_Base):
 
+    __slots__ = [
+        "uid", "gid", "perm", "slink", "selabel",
+        "path", "name", "root_path", "vendor_flag",
+        "pare_path", "rela_path", "spath", "sha1"
+    ]
+
     def __init__(self, path, root_path, vendor_flag):
         super(FL_File, self).__init__(path, root_path, vendor_flag)
 
@@ -75,6 +81,12 @@ class FL_File(FL_Base):
         return "<File %s>" % self.name
 
 class FL_Dir(FL_Base):
+
+    __slots__ = [
+        "uid", "gid", "perm", "slink", "selabel",
+        "path", "name", "root_path", "vendor_flag",
+        "pare_path", "rela_path", "spath"
+    ]
 
     def __eq__(self, obj):
         return all((self.uid == obj.uid,
