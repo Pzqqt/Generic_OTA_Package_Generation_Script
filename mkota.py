@@ -6,6 +6,10 @@ import os
 import tempfile
 import re
 from argparse import ArgumentParser
+from concurrent.futures import ProcessPoolExecutor
+import threading
+
+import bsdiff4
 
 from compare import FL_Compare, compare_build_prop
 from filelist import FL
@@ -70,11 +74,8 @@ class MkOta():
         self.patch_check_script_list_sp = []
         # patch 命令参数列表
         self.patch_do_script_list_sp = []
-        self.diff_files_patch_init()
-        self.diff_files_patch_system()
-        if self.pt_flag:
-            self.diff_files_patch_vendor()
-        self.diff_files_patch_write()
+        print("\nGenerating patch files...")
+        self.diff_files_patch()
 
         self.remove_items()
 
@@ -218,8 +219,42 @@ class MkOta():
         self.us.abort("Failed! Versions Mismatch!", space_no=2)
         self.us.add("}")
 
-    def diff_files_patch_init(self):
-        # SP
+    def _diff_files_patch_system_fifter(self):
+        diff_files_mp = list()
+        if self.cps.diff_files:
+            for f1, f2 in self.cps.diff_files:
+                if f1.slink != f2.slink:
+                    self.cps.diff_slink_files.append(f2)
+                    continue
+                if f1.sha1 == f2.sha1:
+                    self.cps.diff_info_files.append(f2)
+                    continue
+                if f2.name in self.cps.ignore_names:
+                    self.cps.FL_2_isolated_files.append(f2)
+                    cn.file2file(f2.path, os.path.join(self.ota_path, "system", f2.rela_path))
+                    continue
+                diff_files_mp.append([f1, f2, tempfile.mktemp(".p.tmp")])
+        return diff_files_mp
+
+    def _diff_files_patch_vendor_fifter(self):
+        diff_files_mp = list()
+        if self.cpv.diff_files:
+            for f1, f2 in self.cpv.diff_files:
+                if f1.slink != f2.slink:
+                    self.cpv.diff_slink_files.append(f2)
+                    continue
+                if f1.sha1 == f2.sha1:
+                    self.cpv.diff_info_files.append(f2)
+                    continue
+                if f2.name in self.cpv.ignore_names:
+                    self.cpv.FL_2_isolated_files.append(f2)
+                    cn.file2file(f2.path, os.path.join(self.ota_path, "vendor", f2.rela_path))
+                    continue
+                diff_files_mp.append([f1, f2, tempfile.mktemp(".p.tmp")])
+        return diff_files_mp
+
+    def diff_files_patch(self):
+        # init
         # 哈希相同但信息不同的文件
         self.cps.diff_info_files = []
         # 符号链接指向不同的文件
@@ -234,69 +269,38 @@ class MkOta():
             self.cpv.diff_slink_files = []
             self.cpv.ignore_names = set()
         cn.mkdir(os.path.join(self.ota_path, "patch"))
-
-    def diff_files_patch_system(self):
-        if self.cps.diff_files:
-            for f1, f2 in self.cps.diff_files:
-                if f1.slink != f2.slink:
-                    self.cps.diff_slink_files.append(f2)
-                    continue
-                if f1.sha1 == f2.sha1:
-                    self.cps.diff_info_files.append(f2)
-                    continue
-                if f2.name in self.cps.ignore_names:
-                    self.cps.FL_2_isolated_files.append(f2)
-                    cn.file2file(f2.path,
-                                 os.path.join(self.ota_path, "system", f2.rela_path))
-                    continue
-                sys.stderr.write("Generating patch file for %-99s\r" % f2.spath)
-                temp_p_file = tempfile.mktemp(".p.tmp")
-                if not cn.get_bsdiff(f1, f2, temp_p_file):
-                    # 如果生成补丁耗时太长 则取消生成补丁 直接替换文件
-                    self.cps.FL_2_isolated_files.append(f2)
-                    cn.file2file(f2.path,
-                                 os.path.join(self.ota_path, "system", f2.rela_path))
-                    cn.remove_path(temp_p_file)
-                    continue
+        # fifter
+        system_diff_files_mp = self._diff_files_patch_system_fifter()
+        if self.pt_flag:
+            vendor_diff_files_mp = self._diff_files_patch_vendor_fifter()
+        else:
+            vendor_diff_files_mp = list()
+        get_bsdiff_list(system_diff_files_mp + vendor_diff_files_mp)
+        for f1, f2, temp_p_file in system_diff_files_mp:
+            if os.path.exists(temp_p_file) and os.stat(temp_p_file).st_size:
                 p_path = os.path.join(self.ota_path, "patch", "system", f2.rela_path + ".p")
                 p_spath = p_path.replace(self.ota_path, "/tmp", 1).replace("\\", "/")
                 cn.file2file(temp_p_file, p_path, move=True)
-                # SP
                 self.patch_check_script_list_sp.append((f2.spath, f1.sha1, f2.sha1))
                 self.patch_do_script_list_sp.append((f2.spath, f2.sha1, f1.sha1, p_spath))
-            cn.clean_line()
-
-    def diff_files_patch_vendor(self):
-        if self.cpv.diff_files:
-            for f1, f2 in self.cpv.diff_files:
-                if f1.slink != f2.slink:
-                    self.cpv.diff_slink_files.append(f2)
-                    continue
-                if f1.sha1 == f2.sha1:
-                    self.cpv.diff_info_files.append(f2)
-                    continue
-                if f2.name in self.cpv.ignore_names:
-                    self.cpv.FL_2_isolated_files.append(f2)
-                    cn.file2file(f2.path,
-                                 os.path.join(self.ota_path, "vendor", f2.rela_path))
-                    continue
-                sys.stderr.write("Generating patch file for %-99s\r" % f2.spath)
-                temp_p_file = tempfile.mktemp(".p.tmp")
-                if not cn.get_bsdiff(f1, f2, temp_p_file):
-                    self.cpv.FL_2_isolated_files.append(f2)
-                    cn.file2file(f2.path,
-                                 os.path.join(self.ota_path, "vendor", f2.rela_path))
-                    cn.remove_path(temp_p_file)
-                    continue
+            else:
+                print("Failed to generate patch file for %s!" % f1.spath)
+                self.cps.FL_2_isolated_files.append(f2)
+                cn.file2file(f2.path, os.path.join(self.ota_path, "system", f2.rela_path))
+                cn.remove_path(temp_p_file)
+        for f1, f2, temp_p_file in vendor_diff_files_mp:
+            if os.path.exists(temp_p_file) and os.stat(temp_p_file).st_size:
                 p_path = os.path.join(self.ota_path, "patch", "vendor", f2.rela_path + ".p")
                 p_spath = p_path.replace(self.ota_path, "/tmp", 1).replace("\\", "/")
                 cn.file2file(temp_p_file, p_path, move=True)
-                # SP
                 self.patch_check_script_list_sp.append((f2.spath, f1.sha1, f2.sha1))
                 self.patch_do_script_list_sp.append((f2.spath, f2.sha1, f1.sha1, p_spath))
-            cn.clean_line()
-
-    def diff_files_patch_write(self):
+            else:
+                print("Failed to generate patch file for %s!" % f1.spath)
+                self.cpv.FL_2_isolated_files.append(f2)
+                cn.file2file(f2.path, os.path.join(self.ota_path, "vendor", f2.rela_path))
+                cn.remove_path(temp_p_file)
+        # write lines to updater
         self.us.blank_line()
         self.us.ui_print("Unpack Patch Files ...")
         self.us.package_extract_dir("patch", "/tmp/patch")
@@ -443,8 +447,8 @@ class MkOta():
             if d.startswith("GOTAPGS_"):
                 if not cn.is_win():
                     for mdir in ("system_", "vendor_"):
-                        os.system("sudo umount %s > /dev/null"
-                                  % os.path.join(tempfile.gettempdir(), d, mdir))
+                        mount_path = os.path.join(tempfile.gettempdir(), d, mdir)
+                        os.system("mountpoint -q {0} && sudo umount {0}".format(mount_path))
                 cn.remove_path(os.path.join(tempfile.gettempdir(), d))
 
 def adj_zip_name(zip_name):
@@ -453,11 +457,28 @@ def adj_zip_name(zip_name):
         new_zip_name += ".zip"
     return new_zip_name
 
+def _get_bsdiff(old_file, new_file, patch_file):
+    print("Generating patch file for %s" % new_file.spath)
+    child_thread = threading.Thread(
+        target=bsdiff4.file_diff,
+        args=(old_file.path, new_file.path, patch_file)
+    )
+    child_thread.setDaemon(True)
+    child_thread.start()
+    child_thread.join(timeout=cn.TIMEOUT)
+
+def get_bsdiff_list(diff_files):
+    for f1, f2, temp_p_file in diff_files:
+        future_result = process_pool.submit(_get_bsdiff, f1, f2, temp_p_file)
+    process_pool.shutdown(wait=True)
+
 if __name__ == "__main__":
 
     if sys.version_info[0] != 3:
         sys.stderr.write("\nPython 3.x or newer is required.")
         sys.exit()
+
+    process_pool = ProcessPoolExecutor()
 
     print("\nGeneric OTA Package Generation Script %s\nBy Pzqqt" % __version__)
 

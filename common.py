@@ -8,7 +8,6 @@ import shutil
 import re
 import tempfile
 from collections import OrderedDict
-from multiprocessing import Process, Queue
 from time import sleep
 
 import bsdiff4
@@ -137,24 +136,6 @@ def mount_img(file_path):
         "sudo", "mount", file_path, dir_path, "-t ext4", "-o loop,rw"
     )))
     return dir_path
-
-def _get_bsdiff(q, old_file, new_file, patch_file):
-    bsdiff4.file_diff(old_file.path, new_file.path, patch_file)
-    q.put(True)
-
-def get_bsdiff(old_file, new_file, patch_file):
-    # 生成差分补丁
-    q = Queue()
-    p = Process(target=_get_bsdiff, args=(q, old_file, new_file, patch_file))
-    p.start()
-    for _ in range(TIMEOUT * 20):
-        if q.qsize():
-            return True
-        sleep(0.05)
-    # 超时
-    print("Failed to generate patch file for %s!" % old_file.spath)
-    p.terminate()
-    return False
 
 def get_build_prop(file_path):
     # 解析build.prop文件 生成属性键值字典
