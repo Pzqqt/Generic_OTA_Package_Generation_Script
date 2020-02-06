@@ -415,11 +415,6 @@ class MkOta():
         self.us.delete_recursive("/cache/*")
         self.us.delete_recursive("/data/dalvik-cache")
         self.us.blank_line()
-        self.us.add("[ -f /data/adb/magisk/addon.d.sh ] && {", end="\n")
-        self.us.ui_print("Found Magisk addon.d.sh, now reinstall Magisk ...", space_no=2)
-        self.us.add("  sh /data/adb/magisk/addon.d.sh post-restore")
-        self.us.add("}")
-        self.us.blank_line()
         self.us.ui_print("Done!")
         update_script_path = os.path.join(self.ota_path, "META-INF", "com",
                                           "google", "android")
