@@ -486,10 +486,14 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("old_package", help="old package path")
     parser.add_argument("new_package", help="new package path")
+    parser.add_argument("-d", "--tmpdir", help="Custom temp dir(default: read from environment variables)")
     parser.add_argument("-o", "--output", default="OTA.zip", help=" output OTA package name/path (default OTA.zip)(default: ./OTA.zip)")
     parser.add_argument("-e", "--ext-models", help="additional model that allows for model verification(default: None)")
 
     args = parser.parse_args()
+
+    cn.tempfile.tempdir = args.tmpdir
+    cn.mkdir(cn.tempfile.gettempdir())
 
     MkOta(args.old_package, args.new_package, args.output, args.ext_models)
     sys.exit()
