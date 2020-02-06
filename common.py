@@ -10,14 +10,14 @@ import tempfile
 from collections import OrderedDict
 from time import sleep
 
-import bsdiff4
-
 from bin.sdat2img import main as _sdat2img
 
 # 一个常量 表示bsdiff的超时时间(单位: 秒)
 # 主要是为了规避某些奇葩的文件导致的bsdiff卡死
 # 有时耐心的等待是值得的 建议设置为60
 TIMEOUT = 60
+
+FATHER_DIR = os.path.split(__file__)[0]
 
 class PathNotFoundError(OSError):
     pass
@@ -233,7 +233,7 @@ def parameter_split(line):
     return pars
 
 def bin_call(program_name):
-    return os.path.join(os.getcwd(), "bin", program_name)
+    return os.path.join(FATHER_DIR, "bin", program_name)
 
 def mkdir(path):
     # 创建目录
