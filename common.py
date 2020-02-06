@@ -215,7 +215,10 @@ def get_selabel_linux(path):
     # 仅用于Linux环境
     with os.popen("ls -dZ %s" % path) as infos:
         info = infos.read().strip().split()
-    return info[3] if len(info) > 2 else info[0]
+    selabel = info[3] if len(info) > 2 else info[0]
+    if selabel == "?":
+        raise Exception("Can not get selabel with \"ls -Z\" command!")
+    return selabel
 
 def parameter_split(line):
     # 对edify脚本的参数进行拆分
